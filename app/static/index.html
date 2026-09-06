@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>codeforge playground</title>
+<meta name="description" content="Generate and decode QR codes and 100+ barcode symbologies. API with OpenAPI docs.">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="28" height="28"> codeforge</a>
+  <nav>
+    <a href="/docs">API docs</a>
+    <a href="/redoc">ReDoc</a>
+    <a href="/openapi.json">OpenAPI</a>
+    <a href="https://github.com/cpfaffinger/codeforge" rel="noopener">GitHub</a>
+    <span id="version" class="muted"></span>
+  </nav>
+</header>
+
+<main>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="qr" role="tab">QR code</button>
+    <button class="tab" data-tab="barcode" role="tab">Barcode</button>
+    <button class="tab" data-tab="decode" role="tab">Decode</button>
+    <button class="tab" data-tab="batch" role="tab">Batch / PDF</button>
+  </div>
+
+  <!-- ============================================================ QR -->
+  <section id="panel-qr" class="panel active">
+    <div class="grid">
+      <form class="controls" id="form-qr" autocomplete="off">
+        <label>Data <textarea name="data" rows="3" placeholder="https://example.com" required></textarea></label>
+        <div class="row">
+          <label>Error correction
+            <select name="error">
+              <option value="L">L - 7%</option>
+              <option value="M" selected>M - 15%</option>
+              <option value="Q">Q - 25%</option>
+              <option value="H">H - 30%</option>
+            </select>
+          </label>
+          <label>Version <input name="version" type="number" min="1" max="40" placeholder="auto"></label>
+          <label>Format
+            <select name="format">
+              <option>png</option><option>svg</option><option>jpg</option><option>webp</option><option>pdf</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Scale (px/module) <input name="scale" type="number" min="1" max="30" value="10"></label>
+          <label>Border (modules) <input name="border" type="number" min="0" max="50" value="4"></label>
+          <label class="check"><input name="micro" type="checkbox"> Micro QR</label>
+        </div>
+        <div class="row">
+          <label>Foreground <input name="fg" type="color" value="#000000"></label>
+          <label>Background <input name="bg" type="color" value="#ffffff"></label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="primary">Render</button>
+          <button type="button" data-download="qr">Download</button>
+          <button type="button" data-copyb64="qr">Copy base64</button>
+        </div>
+        <div class="urls">
+          <label>API URL <input id="url-qr" readonly><button type="button" data-copy="url-qr" class="mini">copy</button></label>
+          <label>Legacy URL <input id="url-qr-legacy" readonly><button type="button" data-copy="url-qr-legacy" class="mini">copy</button></label>
+        </div>
+        <pre id="info-qr" class="info muted"></pre>
+      </form>
+      <div class="preview" id="preview-qr"><div class="placeholder">Enter data to render a QR code</div></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= barcode -->
+  <section id="panel-barcode" class="panel">
+    <div class="grid">
+      <form class="controls" id="form-barcode" autocomplete="off">
+        <label>Symbology
+          <input name="bcid" list="symbology-list" placeholder="search: code128, ean13, datamatrix, auspost ..." required>
+          <datalist id="symbology-list"></datalist>
+          <span id="sym-desc" class="muted small"></span>
+        </label>
+        <label>Text <textarea name="text" rows="2" required></textarea></label>
+        <label>Encoder options <span class="muted small">(BWIPP, one per line or space separated: <code>includetext</code>, <code>textsize=12</code>, <code>eclevel=H</code>)</span>
+          <textarea name="options" rows="2"></textarea>
+        </label>
+        <div class="row">
+          <label>Scale <input name="scale" type="number" min="1" max="30" value="2"></label>
+          <label>Rotate
+            <select name="rotate"><option value="N">none</option><option value="R">90° right</option><option value="L">90° left</option><option value="I">180°</option></select>
+          </label>
+          <label>Format <select name="format"><option>png</option><option>jpg</option><option>webp</option><option>pdf</option></select></label>
+        </div>
+        <div class="row">
+          <label>Padding width <input name="paddingwidth" type="number" min="0" max="50" value="1"></label>
+          <label>Padding height <input name="paddingheight" type="number" min="0" max="50" value="1"></label>
+          <label>Background <input name="backgroundcolor" type="color" value="#ffffff"></label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="primary">Render</button>
+          <button type="button" id="example-barcode">Load example</button>
+          <button type="button" data-download="barcode">Download</button>
+          <button type="button" data-copyb64="barcode">Copy base64</button>
+        </div>
+        <div class="urls">
+          <label>API URL <input id="url-barcode" readonly><button type="button" data-copy="url-barcode" class="mini">copy</button></label>
+          <label>Legacy URL <input id="url-barcode-legacy" readonly><button type="button" data-copy="url-barcode-legacy" class="mini">copy</button></label>
+        </div>
+      </form>
+      <div class="preview" id="preview-barcode"><div class="placeholder">Pick a symbology and enter text</div></div>
+    </div>
+  </section>
+
+  <!-- ======================================================== decode -->
+  <section id="panel-decode" class="panel">
+    <div class="grid">
+      <form class="controls" id="form-decode">
+        <div id="dropzone" class="dropzone" tabindex="0">
+          <strong>Drop an image here</strong>, paste from the clipboard, or
+          <label class="link">choose a file <input type="file" name="file" accept="image/*" hidden></label>
+          <div class="muted small">PNG, JPEG, GIF, BMP, WEBP - QR codes and 1D barcodes (EAN, UPC, Code 128, Code 39, ITF ...)</div>
+        </div>
+        <div class="actions">
+          <button type="button" id="decode-sample">Decode the current QR preview</button>
+        </div>
+        <div id="decode-results"></div>
+      </form>
+      <div class="preview" id="preview-decode"><div class="placeholder">Decoded image appears here</div></div>
+    </div>
+  </section>
+
+  <!-- ========================================================= batch -->
+  <section id="panel-batch" class="panel">
+    <div class="grid">
+      <form class="controls" id="form-batch" autocomplete="off">
+        <div class="row">
+          <label>Type <select name="type"><option value="qr">QR code</option><option value="barcode">Barcode</option></select></label>
+          <label id="batch-bcid-label" hidden>Symbology <input name="bcid" list="symbology-list" placeholder="code128"></label>
+          <label>Output <select name="output"><option value="pdf">PDF label sheet</option><option value="zip">ZIP of images</option><option value="json">JSON (base64)</option></select></label>
+          <label>Image format <select name="format"><option>png</option><option>svg</option><option>jpg</option></select></label>
+        </div>
+        <label>Items <span class="muted small">(one per line; optional caption after a TAB or " | ")</span>
+          <textarea name="items" rows="8" placeholder="https://example.com/1 | Item 1&#10;https://example.com/2 | Item 2"></textarea>
+        </label>
+        <label>Barcode options <span class="muted small">(applied to every barcode item)</span><input name="options" placeholder="includetext scale=3"></label>
+        <fieldset id="sheet-options">
+          <legend>PDF sheet</legend>
+          <div class="row">
+            <label>Page <select name="page"><option>A4</option><option>LETTER</option><option>A4-LANDSCAPE</option><option>LETTER-LANDSCAPE</option></select></label>
+            <label>Columns <input name="columns" type="number" min="1" max="20" value="3"></label>
+            <label>Rows <input name="rows" type="number" min="1" max="40" value="8"></label>
+          </div>
+          <div class="row">
+            <label>Margin mm <input name="margin_mm" type="number" min="0" max="50" value="10"></label>
+            <label>Gap mm <input name="gap_mm" type="number" min="0" max="50" value="4"></label>
+            <label class="check"><input name="captions" type="checkbox" checked> captions</label>
+          </div>
+        </fieldset>
+        <div class="actions">
+          <button type="submit" class="primary">Generate</button>
+        </div>
+        <pre id="batch-request" class="info muted"></pre>
+      </form>
+      <div class="preview" id="preview-batch"><div class="placeholder">Result download appears here</div></div>
+    </div>
+  </section>
+</main>
+
+<footer class="muted small">
+  codeforge - QR codes by <a href="https://github.com/heuer/segno">segno</a>, barcodes by <a href="https://github.com/bwipp/postscriptbarcode">BWIPP</a> via <a href="https://github.com/adamchainz/treepoem">treepoem</a>, decoding by <a href="https://github.com/mchehab/zbar">zbar</a>. MIT licensed.
+</footer>
+<div id="toast" class="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

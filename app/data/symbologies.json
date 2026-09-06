@@ -1,0 +1,532 @@
+{
+ "ean5": {
+  "description": "EAN-5 (5 digit addon)",
+  "example": "90200",
+  "example_options": "includetext guardwhitespace"
+ },
+ "ean2": {
+  "description": "EAN-2 (2 digit addon)",
+  "example": "05",
+  "example_options": "includetext guardwhitespace"
+ },
+ "ean13": {
+  "description": "EAN-13",
+  "example": "2112345678900",
+  "example_options": "includetext guardwhitespace"
+ },
+ "ean8": {
+  "description": "EAN-8",
+  "example": "02345673",
+  "example_options": "includetext guardwhitespace"
+ },
+ "upca": {
+  "description": "UPC-A",
+  "example": "416000336108",
+  "example_options": "includetext"
+ },
+ "upce": {
+  "description": "UPC-E",
+  "example": "00123457",
+  "example_options": "includetext"
+ },
+ "isbn": {
+  "description": "ISBN",
+  "example": "978-1-56581-231-4 90000",
+  "example_options": "includetext guardwhitespace"
+ },
+ "ismn": {
+  "description": "ISMN",
+  "example": "979-0-2605-3211-3",
+  "example_options": "includetext guardwhitespace"
+ },
+ "issn": {
+  "description": "ISSN",
+  "example": "0311-175X 00 17",
+  "example_options": "includetext guardwhitespace"
+ },
+ "code128": {
+  "description": "Code 128",
+  "example": "Count01234567!",
+  "example_options": "includetext"
+ },
+ "gs1-128": {
+  "description": "GS1-128",
+  "example": "(01)95012345678903(3103)000123",
+  "example_options": "includetext"
+ },
+ "ean14": {
+  "description": "GS1-14",
+  "example": "(01) 0 46 01234 56789 3",
+  "example_options": "includetext"
+ },
+ "sscc18": {
+  "description": "SSCC-18",
+  "example": "(00) 0 0614141 123456789 0",
+  "example_options": "includetext"
+ },
+ "code39": {
+  "description": "Code 39",
+  "example": "THIS IS CODE 39",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "code39ext": {
+  "description": "Code 39 Extended",
+  "example": "Code39 Ext!",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "code32": {
+  "description": "Italian Pharmacode",
+  "example": "01234567",
+  "example_options": "includetext"
+ },
+ "pzn": {
+  "description": "Pharmazentralnummer (PZN)",
+  "example": "123456",
+  "example_options": "includetext"
+ },
+ "code93": {
+  "description": "Code 93",
+  "example": "THIS IS CODE 93",
+  "example_options": "includetext includecheck"
+ },
+ "code93ext": {
+  "description": "Code 93 Extended",
+  "example": "Code93 Ext!",
+  "example_options": "includetext includecheck"
+ },
+ "interleaved2of5": {
+  "description": "Interleaved 2 of 5 (ITF)",
+  "example": "2401234567",
+  "example_options": "height=12 includecheck includetext includecheckintext"
+ },
+ "itf14": {
+  "description": "ITF-14",
+  "example": "0 46 01234 56789 3",
+  "example_options": "includetext"
+ },
+ "identcode": {
+  "description": "Deutsche Post Identcode",
+  "example": "563102430313",
+  "example_options": "includetext"
+ },
+ "leitcode": {
+  "description": "Deutsche Post Leitcode",
+  "example": "21348075016401",
+  "example_options": "includetext"
+ },
+ "databaromni": {
+  "description": "GS1 DataBar Omnidirectional",
+  "example": "(01)24012345678905",
+  "example_options": ""
+ },
+ "databarstacked": {
+  "description": "GS1 DataBar Stacked",
+  "example": "(01)24012345678905",
+  "example_options": ""
+ },
+ "databarstackedomni": {
+  "description": "GS1 DataBar Stacked Omnidirectional",
+  "example": "(01)24012345678905",
+  "example_options": ""
+ },
+ "databartruncated": {
+  "description": "GS1 DataBar Truncated",
+  "example": "(01)24012345678905",
+  "example_options": ""
+ },
+ "databarlimited": {
+  "description": "GS1 DataBar Limited",
+  "example": "(01)15012345678907",
+  "example_options": ""
+ },
+ "databarexpanded": {
+  "description": "GS1 DataBar Expanded",
+  "example": "(01)95012345678903(3103)000123",
+  "example_options": ""
+ },
+ "databarexpandedstacked": {
+  "description": "GS1 DataBar Expanded Stacked",
+  "example": "(01)95012345678903(3103)000123",
+  "example_options": "segments=4"
+ },
+ "gs1northamericancoupon": {
+  "description": "GS1 North American Coupon",
+  "example": "(8110)106141416543213500110000310123196000",
+  "example_options": "includetext segments=8"
+ },
+ "pharmacode": {
+  "description": "Pharmaceutical Binary Code",
+  "example": "117480",
+  "example_options": "showborder"
+ },
+ "pharmacode2": {
+  "description": "Two-track Pharmacode",
+  "example": "117480",
+  "example_options": "includetext showborder"
+ },
+ "code2of5": {
+  "description": "Code 25",
+  "example": "01234567",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "industrial2of5": {
+  "description": "Industrial 2 of 5",
+  "example": "01234567",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "iata2of5": {
+  "description": "IATA 2 of 5",
+  "example": "01234567",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "matrix2of5": {
+  "description": "Matrix 2 of 5",
+  "example": "01234567",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "coop2of5": {
+  "description": "COOP 2 of 5",
+  "example": "01234567",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "datalogic2of5": {
+  "description": "Datalogic 2 of 5",
+  "example": "01234567",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "code11": {
+  "description": "Code 11",
+  "example": "0123456789",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "bc412": {
+  "description": "BC412",
+  "example": "BC412",
+  "example_options": "semi includetext includecheckintext"
+ },
+ "rationalizedCodabar": {
+  "description": "Codabar",
+  "example": "A0123456789B",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "onecode": {
+  "description": "USPS Intelligent Mail",
+  "example": "0123456709498765432101234567891",
+  "example_options": "barcolor=FF0000"
+ },
+ "postnet": {
+  "description": "USPS POSTNET",
+  "example": "01234",
+  "example_options": "includetext includecheckintext"
+ },
+ "planet": {
+  "description": "USPS PLANET",
+  "example": "01234567890",
+  "example_options": "includetext includecheckintext"
+ },
+ "royalmail": {
+  "description": "Royal Mail 4 State Customer Code",
+  "example": "LE28HS9Z",
+  "example_options": "includetext barcolor=FF0000"
+ },
+ "auspost": {
+  "description": "AusPost 4 State Customer Code",
+  "example": "5956439111ABA 9",
+  "example_options": "includetext custinfoenc=character"
+ },
+ "kix": {
+  "description": "Royal Dutch TPG Post KIX",
+  "example": "1231FZ13XHS",
+  "example_options": "includetext"
+ },
+ "japanpost": {
+  "description": "Japan Post 4 State Customer Code",
+  "example": "6540123789-A-K-Z",
+  "example_options": "includetext includecheckintext"
+ },
+ "msi": {
+  "description": "MSI Modified Plessey",
+  "example": "0123456789",
+  "example_options": "includetext includecheck includecheckintext"
+ },
+ "plessey": {
+  "description": "Plessey UK",
+  "example": "01234ABCD",
+  "example_options": "includetext includecheckintext"
+ },
+ "telepen": {
+  "description": "Telepen",
+  "example": "ABCDEF",
+  "example_options": "includetext"
+ },
+ "telepennumeric": {
+  "description": "Telepen Numeric",
+  "example": "01234567",
+  "example_options": "includetext"
+ },
+ "posicode": {
+  "description": "PosiCode",
+  "example": "ABC123",
+  "example_options": "version=b inkspread=-0.5 parsefnc includetext"
+ },
+ "codablockf": {
+  "description": "Codablock F",
+  "example": "CODABLOCK F 34567890123456789010040digit",
+  "example_options": "columns=8"
+ },
+ "code16k": {
+  "description": "Code 16K",
+  "example": "Abcd-1234567890-wxyZ",
+  "example_options": ""
+ },
+ "code49": {
+  "description": "Code 49",
+  "example": "MULTIPLE ROWS IN CODE 49",
+  "example_options": ""
+ },
+ "channelcode": {
+  "description": "Channel Code",
+  "example": "3493",
+  "example_options": "height=12 includetext"
+ },
+ "flattermarken": {
+  "description": "Flattermarken",
+  "example": "11099",
+  "example_options": "inkspread=-0.25 showborder borderleft=0 borderright=0"
+ },
+ "raw": {
+  "description": "Custom 1D symbology",
+  "example": "331132131313411122131311333213114131131221323",
+  "example_options": "height=12"
+ },
+ "daft": {
+  "description": "Custom 4 state symbology",
+  "example": "FATDAFTDAD",
+  "example_options": ""
+ },
+ "symbol": {
+  "description": "Miscellaneous symbols",
+  "example": "fima",
+  "example_options": "backgroundcolor=DD000011"
+ },
+ "pdf417": {
+  "description": "PDF417",
+  "example": "This is PDF417",
+  "example_options": "columns=2"
+ },
+ "pdf417compact": {
+  "description": "Compact PDF417",
+  "example": "This is compact PDF417",
+  "example_options": "columns=2"
+ },
+ "micropdf417": {
+  "description": "MicroPDF417",
+  "example": "MicroPDF417",
+  "example_options": ""
+ },
+ "datamatrix": {
+  "description": "Data Matrix",
+  "example": "This is Data Matrix!",
+  "example_options": ""
+ },
+ "datamatrixrectangular": {
+  "description": "Data Matrix Rectangular",
+  "example": "1234",
+  "example_options": ""
+ },
+ "datamatrixrectangularextension": {
+  "description": "Data Matrix Rectangular Extension",
+  "example": "1234",
+  "example_options": "version=8x96"
+ },
+ "mailmark": {
+  "description": "Royal Mail Mailmark",
+  "example": "JGB 012100123412345678AB19XY1A 0             www.xyz.com",
+  "example_options": "type=29"
+ },
+ "qrcode": {
+  "description": "QR Code",
+  "example": "http://goo.gl/0bis",
+  "example_options": "eclevel=M"
+ },
+ "microqrcode": {
+  "description": "Micro QR Code",
+  "example": "1234",
+  "example_options": ""
+ },
+ "rectangularmicroqrcode": {
+  "description": "Rectangular Micro QR Code",
+  "example": "1234",
+  "example_options": "version=R17x139"
+ },
+ "maxicode": {
+  "description": "MaxiCode",
+  "example": "[)>^03001^02996152382802^029840^029001^0291Z00004951^029UPSN^02906X610^029159^0291234567^0291/1^029^029Y^029634 ALPHA DR^029PITTSBURGH^029PA^029^004",
+  "example_options": "mode=2 parse"
+ },
+ "azteccode": {
+  "description": "Aztec Code",
+  "example": "This is Aztec Code",
+  "example_options": "format=full"
+ },
+ "azteccodecompact": {
+  "description": "Compact Aztec Code",
+  "example": "1234",
+  "example_options": ""
+ },
+ "aztecrune": {
+  "description": "Aztec Runes",
+  "example": "1",
+  "example_options": ""
+ },
+ "codeone": {
+  "description": "Code One",
+  "example": "Code One",
+  "example_options": ""
+ },
+ "hanxin": {
+  "description": "Han Xin Code",
+  "example": "This is Han Xin",
+  "example_options": ""
+ },
+ "dotcode": {
+  "description": "DotCode",
+  "example": "This is DotCode",
+  "example_options": "inkspread=0.16"
+ },
+ "ultracode": {
+  "description": "Ultracode",
+  "example": "Awesome colours!",
+  "example_options": "eclevel=EC2"
+ },
+ "gs1-cc": {
+  "description": "GS1 Composite 2D Component",
+  "example": "(01)95012345678903(3103)000123",
+  "example_options": "ccversion=b cccolumns=4"
+ },
+ "ean13composite": {
+  "description": "EAN-13 Composite",
+  "example": "2112345678900|(99)1234-abcd",
+  "example_options": "includetext"
+ },
+ "ean8composite": {
+  "description": "EAN-8 Composite",
+  "example": "02345673|(21)A12345678",
+  "example_options": "includetext"
+ },
+ "upcacomposite": {
+  "description": "UPC-A Composite",
+  "example": "416000336108|(99)1234-abcd",
+  "example_options": "includetext"
+ },
+ "upcecomposite": {
+  "description": "UPC-E Composite",
+  "example": "00123457|(15)021231",
+  "example_options": "includetext"
+ },
+ "databaromnicomposite": {
+  "description": "GS1 DataBar Omnidirectional Composite",
+  "example": "(01)03612345678904|(11)990102",
+  "example_options": ""
+ },
+ "databarstackedcomposite": {
+  "description": "GS1 DataBar Stacked Composite",
+  "example": "(01)03412345678900|(17)010200",
+  "example_options": ""
+ },
+ "databarstackedomnicomposite": {
+  "description": "GS1 DataBar Stacked Omnidirectional Composite",
+  "example": "(01)03612345678904|(11)990102",
+  "example_options": ""
+ },
+ "databartruncatedcomposite": {
+  "description": "GS1 DataBar Truncated Composite",
+  "example": "(01)03612345678904|(11)990102",
+  "example_options": ""
+ },
+ "databarlimitedcomposite": {
+  "description": "GS1 DataBar Limited Composite",
+  "example": "(01)03512345678907|(21)abcdefghijklmnopqrst",
+  "example_options": ""
+ },
+ "databarexpandedcomposite": {
+  "description": "GS1 DataBar Expanded Composite",
+  "example": "(01)93712345678904(3103)001234|(91)1A2B3C4D5E",
+  "example_options": ""
+ },
+ "databarexpandedstackedcomposite": {
+  "description": "GS1 DataBar Expanded Stacked Composite",
+  "example": "(01)00012345678905(10)ABCDEF|(21)12345678",
+  "example_options": "segments=4"
+ },
+ "gs1-128composite": {
+  "description": "GS1-128 Composite",
+  "example": "(00)030123456789012340|(02)13012345678909(37)24(10)1234567ABCDEFG",
+  "example_options": "ccversion=c"
+ },
+ "gs1datamatrix": {
+  "description": "GS1 Data Matrix",
+  "example": "(01)03453120000011(17)120508(10)ABCD1234(410)9501101020917",
+  "example_options": ""
+ },
+ "gs1datamatrixrectangular": {
+  "description": "GS1 Data Matrix Rectangular",
+  "example": "(01)03453120000011(17)120508(10)ABCD1234(410)9501101020917",
+  "example_options": ""
+ },
+ "gs1qrcode": {
+  "description": "GS1 QR Code",
+  "example": "(01)03453120000011(8200)http://www.abc.net(10)ABCD1234(410)9501101020917",
+  "example_options": ""
+ },
+ "gs1dotcode": {
+  "description": "GS1 DotCode",
+  "example": "(235)5vBZIF%!<B;?oa%(01)01234567890128(8008)19052001",
+  "example_options": "rows=16"
+ },
+ "hibccode39": {
+  "description": "HIBC Code 39",
+  "example": "A123BJC5D6E71",
+  "example_options": "includetext"
+ },
+ "hibccode128": {
+  "description": "HIBC Code 128",
+  "example": "A123BJC5D6E71",
+  "example_options": "includetext"
+ },
+ "hibcdatamatrix": {
+  "description": "HIBC Data Matrix",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ },
+ "hibcdatamatrixrectangular": {
+  "description": "HIBC Data Matrix Rectangular",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ },
+ "hibcpdf417": {
+  "description": "HIBC PDF417",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ },
+ "hibcmicropdf417": {
+  "description": "HIBC MicroPDF417",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ },
+ "hibcqrcode": {
+  "description": "HIBC QR Code",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ },
+ "hibccodablockf": {
+  "description": "HIBC Codablock F",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ },
+ "hibcazteccode": {
+  "description": "HIBC Aztec Code",
+  "example": "A123BJC5D6E71",
+  "example_options": ""
+ }
+}
