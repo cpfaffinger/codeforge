@@ -11,3 +11,4 @@ Initial release.
 * legacy endpoints: `/qr` (pjanczyk/qr-code-generator) and `/?bcid=&text=` (padiazg/barcode-generator), `/live` redirect
 * interactive playground, OpenAPI/Swagger at `/docs`, ReDoc at `/redoc`
 * per-IP rate limiting, size limits, health endpoint, non-root container with healthcheck
+* persistent Ghostscript worker pool with BWIPP preloaded (tens of milliseconds per barcode instead of ~1.5 s with one gs start per image) and an in-memory result cache; treepoem as fallback
