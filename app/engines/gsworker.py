@@ -75,10 +75,10 @@ class _Job:
     bcid: str
     data: str | bytes
     options: str          # formatted BWIPP option string
-    dpi: int
-    page_w: float
+    zoom: int             # PostScript scale factor (1 pt = 1 px at 72 dpi, so zoom = pixels per point)
+    page_w: float         # page size in pixels
     page_h: float
-    x: float
+    x: float              # symbol origin in points (unscaled coordinates)
     y: float
     out_file: str
 
@@ -117,7 +117,7 @@ class GsWorker:
         # warm up: fonts + one tiny symbol so the first real request is fast, and verify the protocol
         try:
             self._exec("/Helvetica findfont 10 scalefont setfont /Courier findfont 10 scalefont setfont")
-            self._run(_Job("code128", "warmup", "includetext", 72, 300, 100, 10, 10, f"{self.dir}/warm.ppm"))
+            self._run(_Job("code128", "warmup", "includetext", 1, 300, 100, 10, 10, f"{self.dir}/warm.ppm"))
         except Exception as exc:  # pragma: no cover - environment dependent
             self.close()
             raise GsWorkerUnavailable(f"ghostscript worker failed to start: {exc}") from None
@@ -170,8 +170,9 @@ class GsWorker:
         r, g, b = (c / 255 for c in SENTINEL)
         ps = f"""
 {{
-  << /HWResolution [{job.dpi} {job.dpi}] /PageSize [{job.page_w} {job.page_h}] /OutputFile ({job.out_file}) >> setpagedevice
+  << /PageSize [{job.page_w} {job.page_h}] /OutputFile ({job.out_file}) >> setpagedevice
   gsave {r:.4f} {g:.4f} {b:.4f} setrgbcolor clippath fill grestore
+  {job.zoom} {job.zoom} scale
   0 setgray /Helvetica findfont 10 scalefont setfont
   {job.x} {job.y} moveto
   {_hex(job.data)} {_hex(job.options)} {_hex(job.bcid)} cvn
@@ -201,8 +202,8 @@ class GsWorker:
         measure = f"{self.dir}/m.ppm"
         final = f"{self.dir}/f.ppm"
         with self.lock:
-            # pass 1: measure at 72 dpi
-            self._run(_Job(bcid, data, opts, 72, MEASURE_PAGE_PT, MEASURE_PAGE_PT, MARGIN_PT, MARGIN_PT, measure))
+            # pass 1: measure at 72 dpi (1 pt = 1 px)
+            self._run(_Job(bcid, data, opts, 1, MEASURE_PAGE_PT, MEASURE_PAGE_PT, MARGIN_PT, MARGIN_PT, measure))
             with Image.open(measure) as im:
                 bbox = _symbol_bbox(im)
                 if bbox is None:
@@ -214,11 +215,11 @@ class GsWorker:
             x0_pt = left - MARGIN_PT
             y0_pt = (MEASURE_PAGE_PT - bottom) - MARGIN_PT
             w_pt, h_pt = right - left, bottom - top
-            dpi = 72 * scale
             if (w_pt * scale) * (h_pt * scale) > MAX_RENDER_PIXELS:
                 raise GsJobError("resulting image is too large, reduce scale")
-            # pass 2: exact page at the requested resolution; move the symbol so its bbox starts at 0,0
-            self._run(_Job(bcid, data, opts, dpi, w_pt, h_pt, -x0_pt, -y0_pt, final))
+            # pass 2: page of exactly bbox*scale pixels, drawing scaled by `scale`,
+            # symbol moved so that its bbox starts at 0,0
+            self._run(_Job(bcid, data, opts, scale, w_pt * scale, h_pt * scale, -x0_pt, -y0_pt, final))
             with Image.open(final) as im:
                 img = im.convert("RGB")
         _replace_sentinel(img)
