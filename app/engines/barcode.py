@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import functools
 import json
+import logging
 import shutil
+import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -154,14 +157,12 @@ def make_barcode(
     rotate = str(render.get("rotate") or "N")
     monochrome = str(render.get("monochrome", "false")).lower() in ("true", "1", "")
 
-    import treepoem
+    cache_key = (bcid, text, tuple(sorted((k, str(v)) for k, v in encoder.items())), scale_x, scale_y, pad_w, pad_h, rotate.upper(), monochrome, out_fmt)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
-    try:
-        image = treepoem.generate_barcode(bcid, text, encoder, scale=min(scale_x, scale_y))
-    except treepoem.TreepoemError as exc:
-        raise RenderError(_clean_bwipp_error(str(exc))) from None
-    except FileNotFoundError:
-        raise RenderError("barcode rendering is unavailable: ghostscript (gs) is not installed") from None
+    image = _render(bcid, text, encoder, min(scale_x, scale_y))
 
     base = min(scale_x, scale_y)
     if scale_x != scale_y:
@@ -177,7 +178,74 @@ def make_barcode(
     image = apply_padding(image, pad_w * max(scale_x, 1), pad_h * max(scale_y, 1), bg)
     if monochrome:
         image = image.convert("1")
-    return pil_to_bytes(image, out_fmt)
+    rendered = pil_to_bytes(image, out_fmt)
+    _cache_put(cache_key, rendered)
+    return rendered
+
+
+# ----------------------------------------------------------------- rendering
+def _render(bcid: str, text: str, encoder: dict[str, str | bool], scale: int) -> Image.Image:
+    """Render with the persistent Ghostscript pool; fall back to treepoem (two gs starts per image)."""
+    if settings.gs_workers > 0:
+        from app.engines import gsworker
+
+        try:
+            pool = gsworker.get_pool(settings.gs_workers, settings.gs_timeout)
+            return pool.render(bcid, text, encoder, scale)
+        except gsworker.GsJobError as exc:
+            raise RenderError(_clean_bwipp_error(str(exc))) from None
+        except gsworker.GsWorkerUnavailable as exc:
+            logging.getLogger(__name__).warning("ghostscript worker unavailable (%s), falling back to treepoem", exc)
+        except Exception as exc:  # pragma: no cover - defensive
+            logging.getLogger(__name__).exception("ghostscript worker failed (%s), falling back to treepoem", exc)
+
+    import treepoem
+
+    try:
+        return treepoem.generate_barcode(bcid, text, encoder, scale=scale)
+    except treepoem.TreepoemError as exc:
+        raise RenderError(_clean_bwipp_error(str(exc))) from None
+    except FileNotFoundError:
+        raise RenderError("barcode rendering is unavailable: ghostscript (gs) is not installed") from None
+
+
+# --------------------------------------------------------------------- cache
+_cache: "OrderedDict[tuple, Rendered]" = OrderedDict()
+_cache_bytes = 0
+_cache_lock = threading.Lock()
+CACHE_STATS = {"hits": 0, "misses": 0}
+
+
+def _cache_get(key: tuple) -> Rendered | None:
+    if settings.cache_max_bytes <= 0:
+        return None
+    with _cache_lock:
+        item = _cache.get(key)
+        if item is None:
+            CACHE_STATS["misses"] += 1
+            return None
+        _cache.move_to_end(key)
+        CACHE_STATS["hits"] += 1
+        return item
+
+
+def _cache_put(key: tuple, item: Rendered) -> None:
+    global _cache_bytes
+    if settings.cache_max_bytes <= 0 or len(item.content) > settings.cache_max_bytes // 4:
+        return
+    with _cache_lock:
+        if key in _cache:
+            _cache_bytes -= len(_cache[key].content)
+        _cache[key] = item
+        _cache_bytes += len(item.content)
+        while _cache_bytes > settings.cache_max_bytes and _cache:
+            _k, old = _cache.popitem(last=False)
+            _cache_bytes -= len(old.content)
+
+
+def cache_stats() -> dict[str, int]:
+    with _cache_lock:
+        return {"entries": len(_cache), "bytes": _cache_bytes, **CACHE_STATS}
 
 
 def _clean_bwipp_error(message: str) -> str:

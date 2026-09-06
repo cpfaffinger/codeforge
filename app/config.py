@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     max_batch_items: int = Field(200, description="Maximum items in one batch request.")
     max_upload_bytes: int = Field(10 * 1024 * 1024, description="Maximum upload size for the decoder.")
 
+    # barcode engine
+    gs_workers: int = Field(2, description="Persistent Ghostscript processes per uvicorn worker (0 = start gs per image via treepoem, slow).")
+    gs_timeout: float = Field(15.0, description="Seconds a single Ghostscript job may take before the worker is restarted.")
+    cache_max_bytes: int = Field(64 * 1024 * 1024, description="In-memory cache for rendered barcodes per uvicorn worker, 0 = off.")
+
     # features
     enable_decoder: bool = True
     enable_batch: bool = True

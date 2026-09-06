@@ -110,6 +110,16 @@ label sheet (A4, LETTER, landscape variants).
 Rate limit headers `X-RateLimit-Limit` / `X-RateLimit-Remaining` are sent on every response, `429` with
 `Retry-After` when exceeded (`/healthz`, `/docs` and static files are exempt).
 
+## Performance
+
+BWIPP is PostScript, so every barcode is rendered by Ghostscript. Starting Ghostscript and
+parsing the 800 kB library for each image (what treepoem and most wrappers do) costs about
+1.5 s per barcode. codeforge keeps a small pool of Ghostscript processes alive with BWIPP
+and the fonts already loaded and feeds them jobs over stdin, which takes tens of
+milliseconds per image; identical requests are additionally served from an in-memory cache.
+If a worker cannot be started the service transparently falls back to treepoem. QR codes are
+rendered in pure Python and never touch Ghostscript.
+
 ## Configuration
 
 All settings are environment variables with the prefix `CODEFORGE_` (or a `.env` file, see
@@ -125,6 +135,9 @@ All settings are environment variables with the prefix `CODEFORGE_` (or a `.env`
 | `CODEFORGE_MAX_IMAGE_PIXELS` | `30000000` | generated/uploaded image size guard |
 | `CODEFORGE_MAX_BATCH_ITEMS` | `200` | items per batch request |
 | `CODEFORGE_MAX_UPLOAD_BYTES` | `10485760` | decoder upload limit |
+| `CODEFORGE_GS_WORKERS` | `2` | persistent Ghostscript processes per uvicorn worker; `0` = one gs start per image (slow) |
+| `CODEFORGE_GS_TIMEOUT` | `15` | seconds per Ghostscript job before the worker is restarted |
+| `CODEFORGE_CACHE_MAX_BYTES` | `67108864` | in-memory cache for rendered barcodes per worker, `0` = off |
 | `CODEFORGE_ENABLE_DECODER` / `ENABLE_BATCH` / `ENABLE_PLAYGROUND` | `true` | switch features off |
 | `CODEFORGE_CORS_ORIGINS` | `*` | CORS allow-list, empty disables |
 | `CODEFORGE_LEGACY_ERROR_STATUS` | `400` | status for invalid legacy barcode requests |

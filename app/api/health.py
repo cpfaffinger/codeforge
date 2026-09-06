@@ -6,7 +6,7 @@ from fastapi import APIRouter
 
 from app import __version__
 from app.config import settings
-from app.engines.barcode import ghostscript_available, symbologies
+from app.engines.barcode import cache_stats, ghostscript_available, symbologies
 from app.engines.decoder import dmtx_available, zbar_available
 from app.models import Health
 
@@ -25,6 +25,14 @@ def healthz():
         symbologies=len(symbologies()),
         rate_limit=settings.rate_limit,
     )
+
+
+@router.get("/stats", summary="Renderer statistics (cache, ghostscript pool)")
+def stats():
+    from app.engines import gsworker
+
+    pool = gsworker._pool
+    return {"cache": cache_stats(), "ghostscript_pool": pool.stats() if pool else None, "gs_workers": settings.gs_workers}
 
 
 @router.get("/version", summary="Version string")

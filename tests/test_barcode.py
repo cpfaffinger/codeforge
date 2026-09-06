@@ -71,3 +71,50 @@ def test_barcode_api(client):
     assert r.status_code == 200 and r.json()["mime"] == "image/png"
     r = client.get("/api/v1/barcode", params={"bcid": "upca", "text": "abc"})
     assert r.status_code == 400
+
+
+def test_result_cache_roundtrip():
+    from app.engines import barcode as b
+    from app.engines.render import Rendered
+
+    key = ("t", "x", (), 2, 2, 1, 1, "N", False, "png")
+    assert b._cache_get(key) is None
+    b._cache_put(key, Rendered(b"png", "image/png", "png", 1, 1))
+    assert b._cache_get(key).content == b"png"
+    assert b.cache_stats()["entries"] >= 1
+
+
+@needs_gs
+def test_gs_worker_matches_treepoem_size():
+    """The persistent worker must produce the same symbol size as treepoem's two-pass render."""
+    import treepoem
+
+    from app.engines import gsworker
+
+    pool = gsworker.GsPool(size=1)
+    for bcid, text, opts in (("code128", "Count01234567!", {"includetext": True}), ("ean13", "2112345678900", {"includetext": True, "guardwhitespace": True}), ("datamatrix", "Hello", {}), ("auspost", "5956439111ABA9", {"custinfoenc": "character", "includetext": True})):
+        opts = {**opts, "backgroundcolor": "FFFFFF"}
+        ours = pool.render(bcid, text, opts, 2)
+        ref = treepoem.generate_barcode(bcid, text, opts, scale=2)
+        assert abs(ours.width - ref.width) <= 2 and abs(ours.height - ref.height) <= 2, (bcid, ours.size, ref.size)
+    import pytest as _pytest
+
+    with _pytest.raises(gsworker.GsJobError):
+        pool.render("ean13", "abc", {"backgroundcolor": "FFFFFF"}, 2)
+    # worker survives an error
+    assert pool.render("code39", "OK", {"backgroundcolor": "FFFFFF"}, 2).width > 10
+
+
+@needs_gs
+def test_gs_worker_is_fast():
+    import time
+
+    from app.engines import gsworker
+
+    pool = gsworker.GsPool(size=1)
+    pool.render("code128", "warm", {"includetext": True, "backgroundcolor": "FFFFFF"}, 2)
+    t0 = time.perf_counter()
+    for i in range(5):
+        pool.render("code128", f"item{i}", {"includetext": True, "backgroundcolor": "FFFFFF"}, 3)
+    per = (time.perf_counter() - t0) / 5
+    assert per < 0.5, f"{per:.3f}s per barcode"

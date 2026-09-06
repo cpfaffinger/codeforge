@@ -8,4 +8,5 @@ treepoem>=3.20,<4
 Pillow>=10.3,<13
 pyzbar>=0.1.9,<0.2
 pylibdmtx>=0.1.10,<0.2
+setuptools>=70          # pylibdmtx imports distutils, removed from Python 3.12
 reportlab>=4.1,<6
