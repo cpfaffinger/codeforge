@@ -109,6 +109,11 @@ class GsWorker:
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1,
         )
+        # Ghostscript reads a non-tty stdin with fread(), which blocks until its buffer is full.
+        # A background reader lets _exec wait with a timeout, and every job is padded with
+        # whitespace so the interpreter never waits for "more input" in the middle of a job.
+        self._lines: queue.Queue[str | None] = queue.Queue()
+        threading.Thread(target=self._reader, name=f"{self.name}-reader", daemon=True).start()
         # warm up: fonts + one tiny symbol so the first real request is fast, and verify the protocol
         try:
             self._exec("/Helvetica findfont 10 scalefont setfont /Courier findfont 10 scalefont setfont")
@@ -119,25 +124,45 @@ class GsWorker:
         log.info("%s: ghostscript worker ready (pid %s)", self.name, self.proc.pid)
 
     # --------------------------------------------------------------- protocol
+    PADDING = " " * 16384 + "\n"
+
+    def _reader(self) -> None:
+        assert self.proc.stdout
+        try:
+            for line in iter(self.proc.stdout.readline, ""):
+                self._lines.put(line)
+        finally:
+            self._lines.put(None)
+
     def _exec(self, ps: str) -> str:
         """Send PostScript, wait for the DONE marker, return everything printed before it."""
         if self.proc.poll() is not None:
             raise GsWorkerUnavailable("ghostscript worker exited")
-        assert self.proc.stdin and self.proc.stdout
+        assert self.proc.stdin
         marker = "@@CF_DONE@@"
-        self.proc.stdin.write(ps + f"\n({marker}\\n) print flush\n")
-        self.proc.stdin.flush()
+        try:
+            self.proc.stdin.write(ps + f"\n(\\n{marker}\\n) print flush\n" + self.PADDING)
+            self.proc.stdin.flush()
+        except (BrokenPipeError, OSError) as exc:
+            raise GsWorkerUnavailable(f"ghostscript worker stdin closed: {exc}") from None
         lines: list[str] = []
         deadline = time.monotonic() + self.timeout
         while True:
-            if time.monotonic() > deadline:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
                 self.kill()
                 raise GsWorkerUnavailable("ghostscript worker timed out")
-            line = self.proc.stdout.readline()
-            if line == "":
+            try:
+                line = self._lines.get(timeout=remaining)
+            except queue.Empty:
+                continue
+            if line is None:
                 raise GsWorkerUnavailable("ghostscript worker closed its output")
             line = line.rstrip("\n")
-            if line == marker:
+            if line.endswith(marker):
+                head = line[: -len(marker)]
+                if head:
+                    lines.append(head)
                 return "\n".join(lines)
             lines.append(line)
 
