@@ -10,7 +10,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # ghostscript renders BWIPP barcodes, libzbar0 decodes, libdmtx0 adds DataMatrix decoding,
 # fonts-urw-base35 provides the PostScript fonts BWIPP uses for human readable text
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ghostscript fonts-urw-base35 libzbar0 libdmtx0 \
+    && apt-get install -y --no-install-recommends ghostscript fonts-urw-base35 libzbar0 \
+    && (apt-get install -y --no-install-recommends libdmtx0t64 || apt-get install -y --no-install-recommends libdmtx0) \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /srv/codeforge
