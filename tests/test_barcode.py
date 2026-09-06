@@ -85,18 +85,27 @@ def test_result_cache_roundtrip():
 
 
 @needs_gs
-def test_gs_worker_matches_treepoem_size():
-    """The persistent worker must produce the same symbol size as treepoem's two-pass render."""
-    import treepoem
-
+def test_gs_worker_output_decodes_and_scales():
+    """Worker output must be a complete, decodable symbol (treepoem's own bbox pass crops the quiet zone,
+    so it is not used as a reference) and must scale linearly."""
     from app.engines import gsworker
+    from tests.conftest import zbar_available
 
     pool = gsworker.GsPool(size=1)
-    for bcid, text, opts in (("code128", "Count01234567!", {"includetext": True}), ("ean13", "2112345678900", {"includetext": True, "guardwhitespace": True}), ("datamatrix", "Hello", {}), ("auspost", "5956439111ABA9", {"custinfoenc": "character", "includetext": True})):
-        opts = {**opts, "backgroundcolor": "FFFFFF"}
-        ours = pool.render(bcid, text, opts, 2)
-        ref = treepoem.generate_barcode(bcid, text, opts, scale=2)
-        assert abs(ours.width - ref.width) <= 2 and abs(ours.height - ref.height) <= 2, (bcid, ours.size, ref.size)
+    two = pool.render("code128", "Count01234567!", {"includetext": True, "backgroundcolor": "FFFFFF"}, 2)
+    four = pool.render("code128", "Count01234567!", {"includetext": True, "backgroundcolor": "FFFFFF"}, 4)
+    assert abs(four.width - 2 * two.width) <= 4 and abs(four.height - 2 * two.height) <= 4, (two.size, four.size)
+    assert two.width > 250 and two.height > 100
+    # white quiet zone on the left and right edge (backgroundcolor painted, nothing cropped)
+    assert two.getpixel((0, two.height // 3)) == (255, 255, 255) and two.getpixel((two.width - 1, two.height // 3)) == (255, 255, 255)
+    if zbar_available():
+        from pyzbar.pyzbar import decode
+
+        assert [s.data.decode() for s in decode(four)] == ["Count01234567!"]
+        ean = pool.render("ean13", "2112345678900", {"includetext": True, "guardwhitespace": True, "backgroundcolor": "FFFFFF"}, 3)
+        assert [s.data.decode() for s in decode(ean)] == ["2112345678900"]
+        dm = pool.render("datamatrix", "Hello codeforge", {"backgroundcolor": "FFFFFF"}, 4)
+        assert dm.width > 30
     import pytest as _pytest
 
     with _pytest.raises(gsworker.GsJobError):
