@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - 2026-09-07
+
+* symbology picker: every supported symbology is selectable from a grouped, filterable list (no more typing ids from memory)
+* data format rules per symbology in the UI and API: extracted from BWIPP's own validation messages (charset, lengths, check digits, field structure), plus category and a link to the BWIPP reference page
+* `/api/v1/symbologies` gained `rules`, `charset`, `min_length`, `max_length`, `category`, `wiki`
+
 ## 1.1.0 - 2026-09-07
 
 * `/showcase`: gallery of every supported symbology with a rendered example, filter, click-through to the prefilled playground

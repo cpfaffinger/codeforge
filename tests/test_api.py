@@ -81,3 +81,15 @@ def test_showcase_and_scan_pages(client):
     assert client.get("/static/vendor/zxing-library.min.js").status_code == 200
     # playground links from the showcase/scanner prefill the barcode form
     assert "p.get(\"bcid\")" in client.get("/static/app.js").text
+
+
+def test_symbology_rules_and_categories(client):
+    ean = client.get("/api/v1/symbologies/ean13").json()
+    assert any("12 or 13 digits" in r for r in ean["rules"]), ean["rules"]
+    assert ean["charset"] == "digits" and ean["min_length"] == 12 and ean["max_length"] == 13
+    assert ean["category"].startswith("Point of sale") and ean["wiki"].endswith("/wiki/EAN-13")
+    aus = client.get("/api/v1/symbologies/auspost").json()
+    assert any("DPID must be 8 digits" in r for r in aus["rules"])
+    items = client.get("/api/v1/symbologies").json()
+    assert all(i["category"] for i in items)
+    assert sum(1 for i in items if i["rules"]) > 80

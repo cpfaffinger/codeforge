@@ -116,19 +116,57 @@
     fetchImage("barcode", url);
   }
   formBc.addEventListener("submit", (e) => { e.preventDefault(); renderBarcode(); });
-  formBc.addEventListener("input", debounce(renderBarcode, 400));
-  formBc.querySelector("[name=bcid]").addEventListener("input", (e) => {
-    const s = state.symbologies[e.target.value.trim().toLowerCase()];
-    $("#sym-desc").textContent = s ? s.description + (s.example ? "  -  example: " + s.example : "") : "";
-  });
+  const renderBarcodeDebounced = debounce(renderBarcode, 400);
+  formBc.addEventListener("input", (e) => { if (e.target.id !== "sym-filter") renderBarcodeDebounced(); });
+  // ---- symbology picker: every supported symbology, grouped by category, filterable ----
+  const symSelect = $("#sym-select"), symFilter = $("#sym-filter"), batchSelect = $("#batch-bcid");
+  function fillSelect(sel, list, keep) {
+    const current = keep || sel.value;
+    sel.innerHTML = "";
+    const groups = {};
+    list.forEach((s) => { (groups[s.category] = groups[s.category] || []).push(s); });
+    Object.keys(groups).sort().forEach((cat) => {
+      const og = document.createElement("optgroup"); og.label = cat;
+      groups[cat].forEach((s) => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.description + "  (" + s.id + ")"; og.appendChild(o); });
+      sel.appendChild(og);
+    });
+    if (current && list.some((s) => s.id === current)) sel.value = current;
+  }
+  function symbologyList(filterText) {
+    const q = (filterText || "").trim().toLowerCase();
+    const all = Object.values(state.symbologies);
+    if (!q) return all;
+    return all.filter((s) => (s.id + " " + s.description + " " + s.category).toLowerCase().includes(q));
+  }
+  function showSymInfo(id) {
+    const s = state.symbologies[id] || state.symbologies[(id || "").toLowerCase()];
+    const box = $("#sym-info");
+    if (!s) { box.hidden = true; return; }
+    box.hidden = false;
+    $("#sym-title").textContent = s.description;
+    $("#sym-cat").textContent = s.category + "  -  id: " + s.id;
+    $("#sym-wiki").href = s.wiki || "https://github.com/bwipp/postscriptbarcode/wiki";
+    const parts = [];
+    if (s.charset === "digits") parts.push("digits only");
+    else if (s.charset === "alphanumeric") parts.push("alphanumeric");
+    else parts.push("any text (see rules)");
+    if (s.min_length != null && s.max_length != null) parts.push(s.min_length === s.max_length ? "exactly " + s.min_length + " characters" : s.min_length + " to " + s.max_length + " characters");
+    else if (s.min_length != null) parts.push("at least " + s.min_length + " characters");
+    else if (s.max_length != null) parts.push("at most " + s.max_length + " characters");
+    $("#sym-summary").textContent = parts.join("  -  ");
+    const ul = $("#sym-rules"); ul.innerHTML = "";
+    (s.rules && s.rules.length ? s.rules : ["No specific rules: the encoder accepts the data as given (length limits depend on the symbol size)."]).forEach((r) => { const li = document.createElement("li"); li.textContent = r; ul.appendChild(li); });
+    $("#sym-example").innerHTML = s.example ? "Example: <code>" + escapeHtml(s.example) + "</code>" + (s.example_options ? " with options <code>" + escapeHtml(s.example_options) + "</code>" : "") : "";
+  }
+  symFilter.addEventListener("input", () => { fillSelect(symSelect, symbologyList(symFilter.value)); showSymInfo(symSelect.value); });
+  symSelect.addEventListener("change", () => { showSymInfo(symSelect.value); renderBarcode(); });
   $("#example-barcode").addEventListener("click", () => {
-    const bcidInput = formBc.querySelector("[name=bcid]");
-    let s = state.symbologies[bcidInput.value.trim().toLowerCase()];
-    if (!s) { s = state.symbologies.code128 || Object.values(state.symbologies)[0]; if (s) bcidInput.value = s.id; }
+    let s = state.symbologies[symSelect.value];
+    if (!s) { s = state.symbologies.code128 || Object.values(state.symbologies)[0]; if (s) { symFilter.value = ""; fillSelect(symSelect, symbologyList(""), s.id); } }
     if (!s) return;
     formBc.querySelector("[name=text]").value = s.example || "";
     formBc.querySelector("[name=options]").value = s.example_options || "";
-    bcidInput.dispatchEvent(new Event("input"));
+    showSymInfo(s.id);
     renderBarcode();
   });
 
@@ -212,6 +250,9 @@
       const list = await (await fetch("/api/v1/symbologies")).json();
       const dl = $("#symbology-list");
       list.forEach((s) => { state.symbologies[s.id] = s; const o = document.createElement("option"); o.value = s.id; o.label = s.description; dl.appendChild(o); });
+      fillSelect(symSelect, symbologyList(""), "code128");
+      fillSelect(batchSelect, symbologyList(""), "code128");
+      showSymInfo(symSelect.value);
     } catch (e) { /* offline docs still work */ }
     // prefill from query string (legacy UI links used data=, imageFormat=, errorCorrection=...)
     const p = new URLSearchParams(location.search);
@@ -233,12 +274,14 @@
     }
     // prefill the barcode form (showcase and scanner link here with bcid/text/options)
     if (p.get("bcid")) {
-      formBc.querySelector("[name=bcid]").value = p.get("bcid");
+      const want = p.get("bcid");
+      const match = Object.keys(state.symbologies).find((k) => k.toLowerCase() === want.toLowerCase()) || want;
+      symFilter.value = ""; fillSelect(symSelect, symbologyList(""), match);
       formBc.querySelector("[name=text]").value = p.get("text") || "";
       formBc.querySelector("[name=options]").value = p.get("options") || "";
-      formBc.querySelector("[name=bcid]").dispatchEvent(new Event("input"));
+      showSymInfo(match);
       activate("barcode"); renderBarcode();
-    } else if (tab === "barcode" && !formBc.querySelector("[name=bcid]").value) { formBc.querySelector("[name=bcid]").value = "code128"; $("#example-barcode").click(); }
+    } else if (tab === "barcode" && !formBc.querySelector("[name=text]").value) { $("#example-barcode").click(); }
   }
   init();
 })();

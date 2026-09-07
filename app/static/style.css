@@ -66,3 +66,10 @@ table.results td, table.results th { border-bottom: 1px solid var(--border); pad
 
 footer { text-align: center; padding: 1rem; }
 .toast { position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: .5rem 1rem; border-radius: 8px; font-size: .9rem; z-index: 10; }
+
+.sym-info { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: .6rem .8rem; font-size: .88rem; display: flex; flex-direction: column; gap: .3rem; background: var(--bg); }
+.sym-head { display: flex; gap: .6rem; flex-wrap: wrap; align-items: baseline; }
+.sym-summary { font-weight: 500; }
+.sym-rules { margin: 0; padding-left: 1.1rem; }
+.sym-rules li { margin: .1rem 0; }
+#sym-select { margin-top: .3rem; }

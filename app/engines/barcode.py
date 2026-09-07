@@ -53,6 +53,8 @@ def symbologies() -> dict[str, dict[str, Any]]:
     described: dict[str, dict[str, Any]] = {}
     if _DATA_FILE.exists():
         described = json.loads(_DATA_FILE.read_text(encoding="utf-8"))
+    from app.engines import bwipp_rules
+
     result: dict[str, dict[str, Any]] = {}
     try:
         import treepoem
@@ -68,7 +70,14 @@ def symbologies() -> dict[str, dict[str, Any]]:
     except ImportError:  # treepoem missing (e.g. local dev without ghostscript)
         for code, d in described.items():
             result[code] = {"id": code, **d}
-    return dict(sorted(result.items()))
+    all_rules = bwipp_rules.rules_by_encoder()
+    for code, item in result.items():
+        rules = all_rules.get(code, [])
+        item["rules"] = [r["message"] for r in rules]
+        item.update(bwipp_rules.summarize(rules))
+        item["category"] = bwipp_rules.category_of(code)
+        item["wiki"] = bwipp_rules.wiki_url(item["description"])
+    return dict(sorted(result.items(), key=lambda kv: (kv[1]["category"], kv[1]["description"].lower())))
 
 
 @functools.lru_cache(maxsize=1)

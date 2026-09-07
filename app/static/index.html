@@ -78,11 +78,18 @@
   <section id="panel-barcode" class="panel">
     <div class="grid">
       <form class="controls" id="form-barcode" autocomplete="off">
-        <label>Symbology
-          <input name="bcid" list="symbology-list" placeholder="search: code128, ean13, datamatrix, auspost ..." required>
+        <label>Symbology <span class="muted small">(all supported symbologies, grouped; type to filter)</span>
+          <input id="sym-filter" type="search" placeholder="filter: ean, gs1, postal, datamatrix, aztec ..." autocomplete="off">
+          <select name="bcid" id="sym-select" required></select>
           <datalist id="symbology-list"></datalist>
-          <span id="sym-desc" class="muted small"></span>
         </label>
+        <div id="sym-info" class="sym-info" hidden>
+          <div class="sym-head"><strong id="sym-title"></strong> <span id="sym-cat" class="muted small"></span> <a id="sym-wiki" class="small" target="_blank" rel="noopener">BWIPP reference</a></div>
+          <div id="sym-summary" class="sym-summary"></div>
+          <div class="small muted">Data format rules (as enforced by the encoder):</div>
+          <ul id="sym-rules" class="sym-rules"></ul>
+          <div id="sym-example" class="small"></div>
+        </div>
         <label>Text <textarea name="text" rows="2" required></textarea></label>
         <label>Encoder options <span class="muted small">(BWIPP, one per line or space separated: <code>includetext</code>, <code>textsize=12</code>, <code>eclevel=H</code>)</span>
           <textarea name="options" rows="2"></textarea>
@@ -138,7 +145,7 @@
       <form class="controls" id="form-batch" autocomplete="off">
         <div class="row">
           <label>Type <select name="type"><option value="qr">QR code</option><option value="barcode">Barcode</option></select></label>
-          <label id="batch-bcid-label" hidden>Symbology <input name="bcid" list="symbology-list" placeholder="code128"></label>
+          <label id="batch-bcid-label" hidden>Symbology <select name="bcid" id="batch-bcid"></select></label>
           <label>Output <select name="output"><option value="pdf">PDF label sheet</option><option value="zip">ZIP of images</option><option value="json">JSON (base64)</option></select></label>
           <label>Image format <select name="format"><option>png</option><option>svg</option><option>jpg</option></select></label>
         </div>

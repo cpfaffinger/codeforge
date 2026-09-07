@@ -20,7 +20,7 @@ container and retire the originals.
 | **Barcodes** | [BWIPP](https://github.com/bwipp/postscriptbarcode) via [treepoem](https://github.com/adamchainz/treepoem) + Ghostscript: EAN/UPC/ISBN, Code 128/39/93, GS1-128, GS1 DataBar, ITF-14, Codabar, MSI, Pharmacode, DataMatrix, PDF417, Aztec, MaxiCode, Australia Post, Royal Mail, USPS, Deutsche Post, Japan Post, Swiss QR, ... - the same engine as bwip-js, so every `bcid` and encoder option is identical |
 | **Decoder** | zbar (QR, EAN, UPC, Code 128/39, ITF, Codabar ...) and libdmtx (DataMatrix) from uploaded or base64 images |
 | **Batch** | many codes per request as JSON (base64), ZIP, or a PDF label sheet with configurable grid and captions |
-| **Playground** | `/` - live preview, symbology search with examples, decoder with drag & drop / paste, batch builder, copy API and legacy URLs |
+| **Playground** | `/` - live preview, every symbology selectable from a grouped/filterable list with its data format rules (extracted from BWIPP's own validation), examples, decoder with drag & drop / paste, batch builder, copy API and legacy URLs |
 | **Showcase** | `/showcase` - every symbology rendered with its example; click a card to open it prefilled in the playground |
 | **Scanner** | `/scan` - live camera scanning in the browser (BarcodeDetector API, ZXing fallback, photo upload decoded on the server); recent scans are kept in localStorage without duplicates, each with a one-click "generate with codeforge" link |
 | **API docs** | Swagger UI at `/docs`, ReDoc at `/redoc`, schema at `/openapi.json` |
@@ -59,7 +59,9 @@ GET  /api/v1/barcode?bcid=ean13&text=2112345678900&includetext&guardwhitespace&f
 GET  /api/v1/barcode?bcid=datamatrix&text=Hello&rotate=R&paddingwidth=10&paddingheight=10
 GET  /api/v1/barcode?bcid=auspost&text=5956439111ABA9&custinfoenc=character&includetext
 POST /api/v1/barcode       {"bcid": "qrcode", "text": "hello", "options": {"eclevel": "H", "scale": 4}, "format": "png"}
-GET  /api/v1/symbologies   [{"id": "ean13", "description": "EAN-13", "example": "2112345678900", "example_options": "includetext guardwhitespace"}, ...]
+GET  /api/v1/symbologies   [{"id": "ean13", "description": "EAN-13", "category": "Point of sale (EAN / UPC)", "example": "2112345678900",
+                            "example_options": "includetext guardwhitespace", "rules": ["EAN-13 must be 12 or 13 digits", ...],
+                            "charset": "digits", "min_length": 12, "max_length": 13, "wiki": "https://github.com/bwipp/postscriptbarcode/wiki/EAN-13"}, ...]
 GET  /api/v1/symbologies/ean13
 ```
 
