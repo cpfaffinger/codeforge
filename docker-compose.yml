@@ -8,7 +8,8 @@ services:
     restart: unless-stopped
     ports:
       # bind to localhost only - a reverse proxy (nginx) terminates TLS for qr.<host> and barcode.<host>
-      - "127.0.0.1:33002:8000"
+      # override the host port with CODEFORGE_BIND_PORT in .env
+      - "127.0.0.1:${CODEFORGE_BIND_PORT:-33002}:8000"
     env_file:
       - path: .env
         required: false

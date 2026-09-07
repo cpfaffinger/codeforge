@@ -34,7 +34,7 @@ open http://localhost:33002/        # playground
 open http://localhost:33002/docs    # API
 ```
 
-The compose file binds to `127.0.0.1:33002`; put nginx/Caddy/Traefik in front for TLS.
+The compose file binds to `127.0.0.1:33002` (change with `CODEFORGE_BIND_PORT` in `.env`); put nginx/Caddy/Traefik in front for TLS.
 
 ## API
 
