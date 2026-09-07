@@ -111,7 +111,7 @@ class Symbology(BaseModel):
     example_options: str = ""
     category: str = "Other"
     rules: list[str] = Field(default_factory=list, description="Data format rules as enforced by BWIPP (its validation messages).")
-    charset: str | None = Field(None, description="digits | alphanumeric | null (no restriction detected)")
+    charset: str | None = Field(None, description="digits | alphanumeric | restricted | null (no restriction detected)")
     min_length: int | None = None
     max_length: int | None = None
     wiki: str = Field("", description="BWIPP wiki page with the full option reference.")

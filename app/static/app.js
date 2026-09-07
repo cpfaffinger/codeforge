@@ -148,8 +148,9 @@
     $("#sym-wiki").href = s.wiki || "https://github.com/bwipp/postscriptbarcode/wiki";
     const parts = [];
     if (s.charset === "digits") parts.push("digits only");
-    else if (s.charset === "alphanumeric") parts.push("alphanumeric");
-    else parts.push("any text (see rules)");
+    else if (s.charset === "alphanumeric") parts.push("capital letters and digits");
+    else if (s.charset === "restricted") parts.push("restricted character set (see rules)");
+    else parts.push("any text");
     if (s.min_length != null && s.max_length != null) parts.push(s.min_length === s.max_length ? "exactly " + s.min_length + " characters" : s.min_length + " to " + s.max_length + " characters");
     else if (s.min_length != null) parts.push("at least " + s.min_length + " characters");
     else if (s.max_length != null) parts.push("at most " + s.max_length + " characters");

@@ -111,10 +111,13 @@ def summarize(rules: list[dict[str, str]], description: str = "") -> dict[str, A
     desc = description.lower()
     for r in rules:
         low = r["message"].lower()
-        if "only digits" in low or "must contain only digits" in low or "non-digit" in low:
-            charset = charset or "digits"
-        elif "only alphanumeric" in low or "must contain only uppercase" in low:
-            charset = charset or "alphanumeric"
+        if charset is None:
+            if re.search(r"must contain only digits\s*$", low) or re.search(r"must be \d+( or \d+| to \d+)? digits", low):
+                charset = "digits"
+            elif re.search(r"only (capital letters and digits|uppercase letters and digits|digits and capital letters|alphanumeric)", low):
+                charset = "alphanumeric"
+            elif "must contain only" in low:
+                charset = "restricted"
         for pat, fn in _LEN_PATTERNS:
             m = pat.search(low)
             if m:
