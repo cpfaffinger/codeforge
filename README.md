@@ -21,6 +21,8 @@ container and retire the originals.
 | **Decoder** | zbar (QR, EAN, UPC, Code 128/39, ITF, Codabar ...) and libdmtx (DataMatrix) from uploaded or base64 images |
 | **Batch** | many codes per request as JSON (base64), ZIP, or a PDF label sheet with configurable grid and captions |
 | **Playground** | `/` - live preview, symbology search with examples, decoder with drag & drop / paste, batch builder, copy API and legacy URLs |
+| **Showcase** | `/showcase` - every symbology rendered with its example; click a card to open it prefilled in the playground |
+| **Scanner** | `/scan` - live camera scanning in the browser (BarcodeDetector API, ZXing fallback, photo upload decoded on the server); recent scans are kept in localStorage without duplicates, each with a one-click "generate with codeforge" link |
 | **API docs** | Swagger UI at `/docs`, ReDoc at `/redoc`, schema at `/openapi.json` |
 | **Ops** | one container, non-root, healthcheck, per-IP rate limit, size limits, `/healthz`, 12-factor config via env vars |
 
@@ -185,7 +187,7 @@ app/engines/qr.py      segno
 app/engines/barcode.py treepoem/BWIPP + Pillow renderer options
 app/engines/decoder.py zbar / libdmtx
 app/engines/render.py  formats, colours, PDF label sheets
-app/static/            playground (plain HTML/CSS/JS)
+app/static/            playground, showcase, scanner (plain HTML/CSS/JS), vendored ZXing
 app/data/symbologies.json  descriptions and examples per symbology (from bwip-js, MIT)
 tests/                 pytest
 deploy/                nginx example

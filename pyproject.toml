@@ -1,6 +1,6 @@
 [project]
 name = "codeforge"
-version = "1.0.0"
+version = "1.1.0"
 description = "QR code and barcode service: 100+ symbologies, decoder, batch/PDF, OpenAPI, legacy-compatible endpoints"
 readme = "README.md"
 license = { text = "MIT" }

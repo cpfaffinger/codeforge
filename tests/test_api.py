@@ -71,3 +71,13 @@ def test_rate_limit_middleware():
             assert c.get("/healthz").status_code == 200  # exempt
     finally:
         os.environ["CODEFORGE_RATE_LIMIT"] = "0"
+
+
+def test_showcase_and_scan_pages(client):
+    r = client.get("/showcase")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"] and "/api/v1/symbologies" in r.text
+    r = client.get("/scan")
+    assert r.status_code == 200 and "BarcodeDetector" in r.text and "/static/vendor/zxing-library.min.js" in r.text
+    assert client.get("/static/vendor/zxing-library.min.js").status_code == 200
+    # playground links from the showcase/scanner prefill the barcode form
+    assert "p.get(\"bcid\")" in client.get("/static/app.js").text

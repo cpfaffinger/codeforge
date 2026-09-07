@@ -57,6 +57,16 @@ def legacy_live():
     return RedirectResponse("/?tab=barcode", status_code=302)
 
 
+@router.get("/showcase", include_in_schema=False, summary="Gallery of every supported symbology")
+def showcase():
+    return FileResponse(STATIC_DIR / "showcase.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+
+
+@router.get("/scan", include_in_schema=False, summary="Live camera scanner")
+def scan():
+    return FileResponse(STATIC_DIR / "scan.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+
+
 @router.get(
     "/",
     summary="Playground, or legacy barcode image when bcid/text are given (bwip-js compatible)",

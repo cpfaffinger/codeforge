@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>codeforge showcase</title>
+<meta name="description" content="Every QR code and barcode symbology codeforge can generate, with a rendered example each.">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .show-head { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .show-head input { font: inherit; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); min-width: 260px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .9rem; }
+  .card { display: flex; flex-direction: column; gap: .4rem; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: .8rem; color: var(--text); text-decoration: none; transition: border-color .15s, transform .15s; }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); text-decoration: none; }
+  .card .img { height: 120px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 6px; overflow: hidden; }
+  .card img { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+  .card .img.failed { color: var(--err); font-size: .8rem; padding: .5rem; text-align: center; background: var(--bg); }
+  .card .title { font-weight: 600; }
+  .card .id { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--muted); }
+  .card .ex { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card.qr { border-color: var(--accent); }
+  .count { color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="28" height="28"> codeforge</a>
+  <nav>
+    <a href="/">Playground</a>
+    <a href="/showcase"><strong>Showcase</strong></a>
+    <a href="/scan">Scan</a>
+    <a href="/docs">API docs</a>
+    <a href="https://github.com/cpfaffinger/codeforge" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <div class="show-head">
+    <div>
+      <h1 style="margin:0;font-size:1.4rem">Everything codeforge can generate</h1>
+      <div class="count" id="count">loading symbologies ...</div>
+    </div>
+    <input id="filter" type="search" placeholder="filter: ean, gs1, postal, datamatrix ..." autocomplete="off">
+  </div>
+  <div class="cards" id="cards"></div>
+</main>
+
+<footer class="muted small">Click a card to open it in the playground with the example prefilled. Examples and descriptions come from BWIPP / bwip-js.</footer>
+
+<script>
+(function () {
+  "use strict";
+  const cards = document.getElementById("cards");
+  const filter = document.getElementById("filter");
+  const count = document.getElementById("count");
+  let items = [];
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function qs(obj) { const p = new URLSearchParams(); Object.entries(obj).forEach(([k, v]) => { if (v !== "" && v != null) p.set(k, v); }); return p.toString(); }
+  function optionParams(str) {
+    const out = {};
+    (str || "").split(/\s+/).filter(Boolean).forEach((tok) => { const i = tok.indexOf("="); if (i > 0) out[tok.slice(0, i)] = tok.slice(i + 1); else out[tok] = "true"; });
+    return out;
+  }
+
+  function card(item) {
+    const a = document.createElement("a");
+    a.className = "card" + (item.qr ? " qr" : "");
+    a.href = item.href;
+    a.dataset.search = (item.id + " " + item.description).toLowerCase();
+    a.innerHTML = '<div class="img"><img loading="lazy" alt="' + esc(item.description) + '" src="' + item.img + '"></div>' +
+      '<div class="title">' + esc(item.description) + '</div>' +
+      '<div class="id">' + esc(item.id) + '</div>' +
+      '<div class="ex" title="' + esc(item.example) + '">' + esc(item.example || "") + '</div>';
+    const img = a.querySelector("img");
+    img.addEventListener("error", () => { const box = a.querySelector(".img"); box.className = "img failed"; box.textContent = "example could not be rendered - open the playground to try it"; });
+    return a;
+  }
+
+  function applyFilter() {
+    const q = filter.value.trim().toLowerCase();
+    let shown = 0;
+    cards.querySelectorAll(".card").forEach((c) => { const on = !q || c.dataset.search.includes(q); c.hidden = !on; if (on) shown++; });
+    count.textContent = shown + " of " + items.length + " symbologies";
+  }
+
+  async function init() {
+    const list = await (await fetch("/api/v1/symbologies")).json();
+    items = [{
+      qr: true, id: "qr (segno)", description: "QR Code - native renderer (PNG, SVG, PDF, colours, Micro QR)", example: "https://github.com/cpfaffinger/codeforge",
+      img: "/api/v1/qr?" + qs({ data: "https://github.com/cpfaffinger/codeforge", scale: 4, border: 2 }),
+      href: "/?" + qs({ tab: "qr", data: "https://github.com/cpfaffinger/codeforge" }),
+    }].concat(list.map((s) => {
+      const opts = optionParams(s.example_options);
+      return {
+        id: s.id, description: s.description, example: s.example,
+        img: "/api/v1/barcode?" + qs(Object.assign({ bcid: s.id, text: s.example || s.id, scale: 2 }, opts)),
+        href: "/?" + qs({ tab: "barcode", bcid: s.id, text: s.example || "", options: s.example_options || "" }),
+      };
+    }));
+    items.forEach((it) => cards.appendChild(card(it)));
+    applyFilter();
+    filter.addEventListener("input", applyFilter);
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) { filter.value = q; applyFilter(); }
+  }
+  init().catch((e) => { count.textContent = "could not load symbologies: " + e.message; });
+})();
+</script>
+</body>
+</html>

@@ -24,3 +24,6 @@ SOFTWARE.
 
 app/data/symbologies.json is derived from bwip-js (lib/symdesc.js),
 Copyright (c) 2011-2021 Mark Warren, Copyright (c) 2004-2021 Terry Burton, MIT licensed.
+
+app/static/vendor/zxing-library.min.js is @zxing/library 0.21.3 (https://github.com/zxing-js/library),
+Copyright ZXing authors, MIT licensed.

@@ -231,7 +231,14 @@
       formQr.querySelector("[name=data]").value = "https://github.com/cpfaffinger/codeforge";
       renderQr();
     }
-    if (tab === "barcode" && !formBc.querySelector("[name=bcid]").value) { formBc.querySelector("[name=bcid]").value = "code128"; $("#example-barcode").click(); }
+    // prefill the barcode form (showcase and scanner link here with bcid/text/options)
+    if (p.get("bcid")) {
+      formBc.querySelector("[name=bcid]").value = p.get("bcid");
+      formBc.querySelector("[name=text]").value = p.get("text") || "";
+      formBc.querySelector("[name=options]").value = p.get("options") || "";
+      formBc.querySelector("[name=bcid]").dispatchEvent(new Event("input"));
+      activate("barcode"); renderBarcode();
+    } else if (tab === "barcode" && !formBc.querySelector("[name=bcid]").value) { formBc.querySelector("[name=bcid]").value = "code128"; $("#example-barcode").click(); }
   }
   init();
 })();

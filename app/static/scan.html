@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>codeforge scanner</title>
+<meta name="description" content="Scan QR codes and barcodes live with your camera; scans are kept locally and can be regenerated with codeforge.">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .scan-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 460px); gap: 1.2rem; align-items: start; }
+  @media (max-width: 860px) { .scan-grid { grid-template-columns: 1fr; } }
+  .cam { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: .8rem; }
+  .video-wrap { position: relative; background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; }
+  video { width: 100%; height: 100%; object-fit: cover; }
+  .video-wrap .hint { position: absolute; color: #ddd; text-align: center; padding: 1rem; font-size: .95rem; }
+  .video-wrap .flash { position: absolute; inset: 0; border: 4px solid var(--ok); opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .video-wrap .flash.on { opacity: 1; transition: none; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .toolbar select { font: inherit; padding: .45rem .55rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); max-width: 100%; }
+  .status { font-size: .85rem; color: var(--muted); }
+  .list { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+  .list h2 { margin: 0; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; }
+  .scan { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .7rem; display: flex; flex-direction: column; gap: .35rem; }
+  .scan.new { border-color: var(--ok); }
+  .scan .raw { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; word-break: break-all; white-space: pre-wrap; }
+  .scan .meta { font-size: .78rem; color: var(--muted); display: flex; gap: .6rem; flex-wrap: wrap; }
+  .scan .fmt { font-weight: 600; color: var(--text); }
+  .scan .acts { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .scan .acts button, .scan .acts a { font-size: .8rem; padding: .25rem .55rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); text-decoration: none; cursor: pointer; }
+  .scan .acts a.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .empty { color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="28" height="28"> codeforge</a>
+  <nav>
+    <a href="/">Playground</a>
+    <a href="/showcase">Showcase</a>
+    <a href="/scan"><strong>Scan</strong></a>
+    <a href="/docs">API docs</a>
+    <a href="https://github.com/cpfaffinger/codeforge" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <div class="scan-grid">
+    <section class="cam">
+      <div class="video-wrap">
+        <video id="video" playsinline muted autoplay hidden></video>
+        <div class="hint" id="hint">Press <strong>Start camera</strong> and point it at a QR code or barcode.<br><span class="small">Camera access needs HTTPS and your permission. Nothing is uploaded; decoding runs in your browser.</span></div>
+        <div class="flash" id="flash"></div>
+      </div>
+      <div class="toolbar">
+        <button class="primary" id="start">Start camera</button>
+        <button id="stop" hidden>Stop</button>
+        <select id="cameras" hidden></select>
+        <label class="small" style="display:inline-flex;gap:.3rem;align-items:center"><input type="checkbox" id="beep" checked> beep</label>
+        <label class="small" style="display:inline-flex;gap:.3rem;align-items:center;cursor:pointer">
+          <input type="file" id="photo" accept="image/*" capture="environment" hidden> <span style="text-decoration:underline">decode a photo instead</span>
+        </label>
+      </div>
+      <div class="status" id="status">engine: detecting ...</div>
+    </section>
+
+    <section class="list">
+      <h2>Recent scans <span class="small muted" id="listinfo"></span></h2>
+      <div id="scans"></div>
+      <div class="toolbar">
+        <button id="clear">Clear list</button>
+        <span class="small muted">kept in this browser only (localStorage), duplicates are merged</span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="muted small">Live decoding uses the browser's BarcodeDetector API when available, otherwise <a href="https://github.com/zxing-js/library">ZXing</a> (MIT), served from this site.</footer>
+<div id="toast" class="toast" hidden></div>
+
+<script src="/static/vendor/zxing-library.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  const MAX_ITEMS = 50;
+  const KEY = "codeforge.scans.v1";
+  const DUP_WINDOW_MS = 2500;         // ignore the same code re-read within this window (continuous video)
+  const $ = (s) => document.querySelector(s);
+  const video = $("#video"), hint = $("#hint"), flash = $("#flash"), status = $("#status"), cams = $("#cameras");
+  let engine = null, detector = null, zxing = null, running = false, rafTimer = null, lastSeen = {};
+
+  // ---- format mapping (BarcodeDetector / ZXing names -> codeforge bcid) ----
+  const BCID = {
+    qr_code: "qrcode", QR_CODE: "qrcode",
+    ean_13: "ean13", EAN_13: "ean13", ean_8: "ean8", EAN_8: "ean8",
+    upc_a: "upca", UPC_A: "upca", upc_e: "upce", UPC_E: "upce",
+    code_128: "code128", CODE_128: "code128", code_39: "code39", CODE_39: "code39", code_93: "code93", CODE_93: "code93",
+    itf: "interleaved2of5", ITF: "interleaved2of5", codabar: "rationalizedCodabar", CODABAR: "rationalizedCodabar",
+    data_matrix: "datamatrix", DATA_MATRIX: "datamatrix", pdf417: "pdf417", PDF_417: "pdf417", aztec: "azteccode", AZTEC: "azteccode",
+    RSS_14: "databaromni", RSS_EXPANDED: "databarexpanded", MAXICODE: "maxicode",
+  };
+  function niceFormat(f) { return String(f).toUpperCase().replace(/_/g, " "); }
+
+  // ---- storage ----
+  function load() { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; } }
+  function save(list) { try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX_ITEMS))); } catch (e) { /* private mode */ } }
+  function addScan(text, format, source) {
+    const now = Date.now();
+    const k = format + "|" + text;
+    if (source === "video" && lastSeen[k] && now - lastSeen[k] < DUP_WINDOW_MS) return false;
+    lastSeen[k] = now;
+    const list = load();
+    const idx = list.findIndex((s) => s.text === text && s.format === format);
+    let item;
+    if (idx >= 0) { item = list.splice(idx, 1)[0]; item.count = (item.count || 1) + 1; item.last = now; }
+    else { item = { text, format, first: now, last: now, count: 1 }; }
+    list.unshift(item);
+    save(list);
+    render(list, k);
+    if ($("#beep").checked) beep();
+    flash.classList.add("on"); setTimeout(() => flash.classList.remove("on"), 250);
+    return true;
+  }
+
+  // ---- ui ----
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => (t.hidden = true), 1800); }
+  function genLink(item) {
+    const bcid = BCID[item.format] || "";
+    if (!bcid || bcid === "qrcode") return "/?" + new URLSearchParams({ tab: "qr", data: item.text }).toString();
+    return "/?" + new URLSearchParams({ tab: "barcode", bcid, text: item.text, options: "includetext" }).toString();
+  }
+  function render(list, highlightKey) {
+    const box = $("#scans");
+    box.innerHTML = "";
+    $("#listinfo").textContent = list.length ? list.length + " / " + MAX_ITEMS : "";
+    if (!list.length) { box.innerHTML = '<div class="empty">No scans yet.</div>'; return; }
+    list.forEach((item, i) => {
+      const el = document.createElement("div");
+      el.className = "scan" + (highlightKey === item.format + "|" + item.text ? " new" : "");
+      const isUrl = /^https?:\/\//i.test(item.text);
+      el.innerHTML = '<div class="raw">' + esc(item.text) + "</div>" +
+        '<div class="meta"><span class="fmt">' + esc(niceFormat(item.format)) + "</span><span>" + new Date(item.last).toLocaleString() + "</span>" + (item.count > 1 ? "<span>seen " + item.count + "x</span>" : "") + "</div>" +
+        '<div class="acts"><a class="primary" href="' + esc(genLink(item)) + '">Generate with codeforge</a>' +
+        '<button data-copy="' + i + '">Copy</button>' + (isUrl ? '<a href="' + esc(item.text) + '" target="_blank" rel="noopener">Open link</a>' : "") +
+        '<button data-del="' + i + '">Delete</button></div>';
+      box.appendChild(el);
+    });
+    box.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => { await navigator.clipboard.writeText(load()[+b.dataset.copy].text); toast("copied"); }));
+    box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { const l = load(); l.splice(+b.dataset.del, 1); save(l); render(l); }));
+  }
+  $("#clear").addEventListener("click", () => { if (confirm("Delete all stored scans?")) { save([]); render([]); } });
+
+  function beep() {
+    try { const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 1400; g.gain.value = .08; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + .08); } catch (e) { /* no audio */ }
+  }
+
+  // ---- engines ----
+  async function pickEngine() {
+    if ("BarcodeDetector" in window) {
+      try {
+        const supported = await window.BarcodeDetector.getSupportedFormats();
+        if (supported.length) { detector = new window.BarcodeDetector({ formats: supported }); engine = "BarcodeDetector"; status.textContent = "engine: BarcodeDetector (" + supported.length + " formats)"; return; }
+      } catch (e) { /* fall through */ }
+    }
+    if (window.ZXing) {
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      zxing = new ZXing.BrowserMultiFormatReader(hints, 300);
+      engine = "ZXing"; status.textContent = "engine: ZXing (in-browser)"; return;
+    }
+    status.textContent = "no decoder available in this browser";
+  }
+
+  async function listCameras() {
+    try {
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+      cams.innerHTML = "";
+      devs.forEach((d, i) => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || "camera " + (i + 1); cams.appendChild(o); });
+      // prefer a rear camera
+      const back = devs.find((d) => /back|rear|environment/i.test(d.label));
+      if (back) cams.value = back.deviceId;
+      cams.hidden = devs.length < 2;
+    } catch (e) { /* ignore */ }
+  }
+
+  async function start() {
+    if (!engine) await pickEngine();
+    if (!engine) return;
+    $("#start").disabled = true;
+    try {
+      const constraints = { video: cams.value ? { deviceId: { exact: cams.value } } : { facingMode: { ideal: "environment" } }, audio: false };
+      if (engine === "BarcodeDetector") {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream; await video.play();
+        running = true; loopDetect();
+      } else {
+        await zxing.decodeFromConstraints(constraints, video, (result, err) => {
+          if (result) addScan(result.getText(), result.getBarcodeFormat && ZXing.BarcodeFormat[result.getBarcodeFormat()] || "UNKNOWN", "video");
+          else if (err && !(err instanceof ZXing.NotFoundException) && !(err instanceof ZXing.ChecksumException) && !(err instanceof ZXing.FormatException)) status.textContent = "engine: ZXing - " + err.message;
+        });
+        running = true;
+      }
+      video.hidden = false; hint.hidden = true; $("#stop").hidden = false;
+      await listCameras();
+    } catch (e) {
+      status.textContent = "camera error: " + e.message + (location.protocol !== "https:" ? " (camera access requires HTTPS)" : "");
+      $("#start").disabled = false;
+    }
+  }
+  function loopDetect() {
+    if (!running) return;
+    rafTimer = setTimeout(async () => {
+      try {
+        if (video.readyState >= 2) {
+          const codes = await detector.detect(video);
+          codes.forEach((c) => c.rawValue && addScan(c.rawValue, c.format, "video"));
+        }
+      } catch (e) { /* frame not ready */ }
+      loopDetect();
+    }, 150);
+  }
+  function stop() {
+    running = false; clearTimeout(rafTimer);
+    if (zxing) { try { zxing.reset(); } catch (e) { /* noop */ } }
+    if (video.srcObject) { video.srcObject.getTracks().forEach((t) => t.stop()); video.srcObject = null; }
+    video.hidden = true; hint.hidden = false; $("#stop").hidden = true; $("#start").disabled = false;
+  }
+  $("#start").addEventListener("click", start);
+  $("#stop").addEventListener("click", stop);
+  cams.addEventListener("change", () => { if (running) { stop(); start(); } });
+
+  // photo fallback: decode on the server (works in every browser)
+  $("#photo").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    status.textContent = "decoding photo on the server ...";
+    const fd = new FormData(); fd.append("file", f, f.name || "photo");
+    try {
+      const r = await fetch("/api/v1/decode", { method: "POST", body: fd }); const j = await r.json();
+      if (!r.ok) { status.textContent = "decode failed: " + j.detail; return; }
+      if (!j.count) { status.textContent = "no code found in the photo"; return; }
+      j.symbols.forEach((s) => addScan(s.data, s.type, "photo"));
+      status.textContent = j.count + " code(s) found in the photo";
+    } catch (err) { status.textContent = "decode failed: " + err.message; }
+    e.target.value = "";
+  });
+
+  render(load());
+  pickEngine();
+  window.addEventListener("pagehide", stop);
+})();
+</script>
+</body>
+</html>

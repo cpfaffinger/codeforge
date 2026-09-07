@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-09-07
+
+* `/showcase`: gallery of every supported symbology with a rendered example, filter, click-through to the prefilled playground
+* `/scan`: live camera scanner (browser BarcodeDetector API, ZXing fallback served locally, photo upload decoded on the server), local scan history without duplicates and "generate with codeforge" links
+* playground accepts `?tab=barcode&bcid=&text=&options=` to prefill the barcode form
+* compose: host port configurable via `CODEFORGE_BIND_PORT`
+
 ## 1.0.0 - 2026-09-06
 
 Initial release.
