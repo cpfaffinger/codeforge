@@ -79,7 +79,8 @@ def scan():
 )
 def root(request: Request):
     params = dict(request.query_params)
-    if "bcid" in params or "text" in params:
+    # legacy bwip-js image request; links from the showcase/scanner carry tab=... and want the playground
+    if ("bcid" in params or "text" in params) and "tab" not in params:
         return legacy_barcode(params)
     if not settings.enable_playground:
         return RedirectResponse("/docs", status_code=302)

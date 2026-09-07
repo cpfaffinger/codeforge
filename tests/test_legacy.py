@@ -85,3 +85,8 @@ def test_legacy_barcode_bad_data(client):
     assert r.status_code == 400 and r.text.startswith("BarcodeGenerator:")
     r = client.get("/", params={"bcid": "doesnotexist", "text": "1"})
     assert r.status_code == 400 and "unknown symbology" in r.text
+
+
+def test_root_with_tab_is_playground_even_with_bcid(client):
+    r = client.get("/", params={"tab": "barcode", "bcid": "ean13", "text": "2112345678900", "options": "includetext"})
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
