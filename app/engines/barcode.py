@@ -74,7 +74,7 @@ def symbologies() -> dict[str, dict[str, Any]]:
     for code, item in result.items():
         rules = all_rules.get(code, [])
         item["rules"] = [r["message"] for r in rules]
-        item.update(bwipp_rules.summarize(rules))
+        item.update(bwipp_rules.summarize(rules, item["description"]))
         item["category"] = bwipp_rules.category_of(code)
         item["wiki"] = bwipp_rules.wiki_url(item["description"])
     return dict(sorted(result.items(), key=lambda kv: (kv[1]["category"], kv[1]["description"].lower())))

@@ -96,10 +96,19 @@ _LEN_PATTERNS = [
 ]
 
 
-def summarize(rules: list[dict[str, str]]) -> dict[str, Any]:
-    """Best-effort structured hints derived from the rule messages."""
+_GENERIC_SUBJECT = re.compile(r"^(the )?(data|input|message|barcode|symbol|text|length|data length)\b")
+
+
+def summarize(rules: list[dict[str, str]], description: str = "") -> dict[str, Any]:
+    """Best-effort structured hints derived from the rule messages.
+
+    Length hints are only taken from rules that talk about the whole data (subject is the
+    symbology name or a generic word), not about a part of it (add-on, DPID, postcode ...).
+    The full rule list is always shown, so a missing summary never hides a rule.
+    """
     charset = None
     length_hits: list[tuple[int | None, int | None]] = []
+    desc = description.lower()
     for r in rules:
         low = r["message"].lower()
         if "only digits" in low or "must contain only digits" in low or "non-digit" in low:
@@ -109,11 +118,10 @@ def summarize(rules: list[dict[str, str]]) -> dict[str, Any]:
         for pat, fn in _LEN_PATTERNS:
             m = pat.search(low)
             if m:
-                length_hits.append(fn(m))
+                subject = low[: m.start()].strip()
+                if (desc and subject == desc) or (desc and subject.startswith(desc)) or _GENERIC_SUBJECT.match(subject) or subject == "":
+                    length_hits.append(fn(m))
                 break
-    # symbologies made of several fields (postal codes, composites) carry several length rules that
-    # refer to different parts of the data; only summarise when there is exactly one, the full list
-    # of rules is always shown anyway
     min_len = max_len = None
     if len(length_hits) == 1:
         min_len, max_len = length_hits[0]
