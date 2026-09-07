@@ -118,6 +118,10 @@ def barcode_get(
     known = {"bcid", "text", "scale", "scaleX", "scaleY", "rotate", "paddingwidth", "paddingheight", "format", "output", "download"}
     options: dict[str, Any] = {k: v for k, v in request.query_params.items() if k not in known}
     options.update({"scale": scale, "scalex": scaleX, "scaley": scaleY, "rotate": rotate, "paddingwidth": paddingwidth, "paddingheight": paddingheight})
+    if not barcode_engine.is_image_format(format):
+        # e.g. Aztec "format=full" is a BWIPP encoder option, not an output format
+        options["format"] = format
+        format = "png"
     try:
         rendered = barcode_engine.make_barcode(bcid, text, options, fmt=format)
     except RenderError as exc:

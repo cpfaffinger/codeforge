@@ -71,10 +71,35 @@ def symbologies() -> dict[str, dict[str, Any]]:
     return dict(sorted(result.items()))
 
 
+@functools.lru_cache(maxsize=1)
+def _bcid_index() -> dict[str, str]:
+    """lowercase id -> canonical BWIPP id (a few encoders are camelCase, e.g. rationalizedCodabar)."""
+    return {k.lower(): k for k in symbologies()}
+
+
+def resolve_bcid(bcid: str) -> str:
+    """Case-insensitive lookup of a symbology id; raises RenderError for unknown ids."""
+    if not bcid or not bcid.strip():
+        raise RenderError("bcid (symbology) is required")
+    key = bcid.strip().lower()
+    index = _bcid_index()
+    if index and key not in index:
+        raise RenderError(f"unknown symbology '{bcid}', see /api/v1/symbologies")
+    return index.get(key, key)
+
+
+def is_image_format(value: Any) -> bool:
+    from app.engines.render import ALL_FORMATS
+
+    return isinstance(value, str) and value.strip().lower().lstrip(".") in set(ALL_FORMATS) | {"jpeg"}
+
+
 def normalize_options(raw: dict[str, Any]) -> tuple[dict[str, str | bool], dict[str, Any]]:
     """Split a flat option dict into (BWIPP encoder options, renderer options).
 
     Values "true"/"" become boolean flags, everything else stays a string.
+    ``format`` is ambiguous: png/jpg/... selects the output image format, anything else
+    (e.g. Aztec ``format=full``) is a BWIPP encoder option.
     """
     encoder: dict[str, str | bool] = {}
     render: dict[str, Any] = {}
@@ -82,7 +107,7 @@ def normalize_options(raw: dict[str, Any]) -> tuple[dict[str, str | bool], dict[
         k = str(key).strip().lower()
         if not k:
             continue
-        if k in RENDER_OPTIONS:
+        if k in RENDER_OPTIONS and not (k == "format" and not is_image_format(value)):
             render[k] = value
             continue
         if isinstance(value, bool):
@@ -127,10 +152,7 @@ def make_barcode(
         raise RenderError("text is required")
     if len(text) > settings.max_data_length:
         raise RenderError(f"text is longer than {settings.max_data_length} characters")
-    bcid = bcid.strip().lower()
-    known = symbologies()
-    if known and bcid not in known:
-        raise RenderError(f"unknown symbology '{bcid}', see /api/v1/symbologies")
+    bcid = resolve_bcid(bcid)
     if not ghostscript_available():
         raise RenderError("barcode rendering is unavailable: ghostscript (gs) is not installed")
 

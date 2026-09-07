@@ -201,7 +201,7 @@
  },
  "bc412": {
   "description": "BC412",
-  "example": "BC412",
+  "example": "AQ45670",
   "example_options": "semi includetext includecheckintext"
  },
  "rationalizedCodabar": {
@@ -528,5 +528,20 @@
   "description": "HIBC Aztec Code",
   "example": "A123BJC5D6E71",
   "example_options": ""
+ },
+ "gs1dlqrcode": {
+  "description": "gs1dlqrcode",
+  "example": "https://example.com/01/09506000134352/21/AB12345",
+  "example_options": ""
+ },
+ "gs1dldatamatrix": {
+  "description": "gs1dldatamatrix",
+  "example": "https://example.com/01/09506000134352",
+  "example_options": ""
+ },
+ "mands": {
+  "description": "mands",
+  "example": "02345673",
+  "example_options": "includetext"
  }
 }

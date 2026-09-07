@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response
 
 from app.config import settings
-from app.engines.barcode import make_barcode
+from app.engines.barcode import is_image_format, make_barcode
 from app.engines.qr import make_qr
 from app.engines.render import RenderError
 
@@ -97,6 +97,10 @@ def legacy_barcode(params: dict[str, str]) -> Response:
     fmt = params.pop("format", "png").strip().lower() or "png"
     # legacy defaults applied by the old service
     options: dict[str, str | bool] = dict(params)
+    if not is_image_format(fmt):
+        # BWIPP encoder option (e.g. Aztec format=full), not an output format
+        options["format"] = fmt
+        fmt = "png"
     options.setdefault("backgroundcolor", "FFFFFF")
     options.setdefault("padding", "1")
     options.setdefault("paddingwidth", options.get("padding", "1"))

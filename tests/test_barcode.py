@@ -127,3 +127,29 @@ def test_gs_worker_is_fast():
         pool.render("code128", f"item{i}", {"includetext": True, "backgroundcolor": "FFFFFF"}, 3)
     per = (time.perf_counter() - t0) / 5
     assert per < 0.5, f"{per:.3f}s per barcode"
+
+
+def test_resolve_bcid_case_insensitive():
+    from app.engines.barcode import resolve_bcid
+
+    assert resolve_bcid("RATIONALIZEDCODABAR") == "rationalizedCodabar"
+    assert resolve_bcid("Code128") == "code128"
+    with pytest.raises(RenderError):
+        resolve_bcid("nope")
+
+
+def test_format_option_collision():
+    enc, render = normalize_options({"format": "full", "scale": "2"})
+    assert enc == {"format": "full"} and render == {"scale": "2"}
+    enc, render = normalize_options({"format": "jpg"})
+    assert enc == {} and render == {"format": "jpg"}
+
+
+@needs_gs
+def test_aztec_format_full_and_codabar(client):
+    r = client.get("/api/v1/barcode", params={"bcid": "azteccode", "text": "This is Aztec Code", "format": "full"})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    r = client.get("/", params={"bcid": "azteccode", "text": "x", "format": "full"})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    r = client.get("/api/v1/barcode", params={"bcid": "rationalizedCodabar", "text": "A0123456789B", "includetext": ""})
+    assert r.status_code == 200

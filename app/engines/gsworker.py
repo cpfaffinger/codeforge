@@ -183,6 +183,8 @@ class GsWorker:
   $error /errorname get dup length string cvs print ( ) print
   $error /errorinfo get dup type /stringtype eq {{ print }} {{ pop }} ifelse (\\n) print
   $error /newerror false put
+  $error /errorinfo null put
+  $error /errorname null put
   grestoreall initgraphics erasepage
 }} if
 """
