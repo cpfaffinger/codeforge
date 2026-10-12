@@ -7,6 +7,7 @@
   :root { --bg: #0f1218; --panel: #171b23; --text: #e5e7eb; --muted: #9ca3af; --border: #2b3240; --accent: #3b82f6; --check: #232936; }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -112,3 +113,4 @@ footer { text-align: center; padding: 1rem; }
 table.results td.acts { white-space: nowrap; }
 table.results a.mini { font-size: .8rem; }
 .error { color: var(--err); border: 1px solid var(--err); border-radius: 8px; padding: .6rem .8rem; font-size: .9rem; word-break: break-word; }
+@media (max-width: 640px) { .top nav #version { display: none; } .top { padding: .6rem .8rem; } }
