@@ -1,0 +1,21 @@
+{
+  "name": "codeforge scanner",
+  "short_name": "codeforge",
+  "description": "Scan QR codes and barcodes with the camera; generate 100+ symbologies.",
+  "start_url": "/scan?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1218",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Scan", "url": "/scan?source=pwa", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Playground", "url": "/?source=pwa" }
+  ]
+}

@@ -1,24 +1,27 @@
-"""Decode QR codes and 1D barcodes from images (zbar via pyzbar; DataMatrix via libdmtx when installed).
+"""Decode QR codes and barcodes from images.
 
-Real photos rarely decode on the first try: a 12 megapixel phone picture with a small, slightly
-blurred code, uneven lighting, a screenshot of a screen, an inverted (white on black) code.
-``decode_image`` therefore runs a ladder of cheap pre-processing passes and stops at the first
-hit, within a time budget:
+Engines, in the order they are tried:
 
-* size ladder - zbar is fastest and most reliable at ~1000-1600 px on the long edge, so large
-  photos are tried downscaled first (also 4x faster than the original), small images upscaled
-* contrast passes - autocontrast, local illumination flattening (gray minus blurred gray),
-  unsharp masking, and an inverted copy
-* a 45 degree rotated copy as a last resort for QR codes photographed diagonally
+1. **zxing-cpp** (``zxingcpp``): QR Code, Micro QR, rMQR, Data Matrix, Aztec, PDF417, MaxiCode,
+   EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar - with its own rotation, inversion and
+   multi-scale search. Finds several codes per image.
+2. **zbar** (``pyzbar``) through a ladder of cheap pre-processing passes - the fallback for
+   photos zxing-cpp gives up on: downscaled copies (zbar likes ~1000-1600 px), illumination
+   flattening, autocontrast, sharpening, an inverted copy and a 45 degree rotation.
+3. **libdmtx** (``pylibdmtx``) for Data Matrix when nothing else was found.
 
-Every result carries the pass that found it (``found_by``) so the API can be tuned from the logs.
+Every pass is bounded by ``CODEFORGE_DECODE_BUDGET`` seconds in total and every result carries
+the engine and pass that found it (``found_by``), which is also counted for ``/stats``.
+HEIC/HEIF photos are opened through pillow-heif when it is installed.
 """
 
 from __future__ import annotations
 
 import io
 import logging
+import threading
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Iterator
 
@@ -29,7 +32,19 @@ from app.engines.render import RenderError
 
 log = logging.getLogger(__name__)
 
-SUPPORTED = "PNG, JPEG, GIF, BMP, WEBP, TIFF"
+try:  # HEIC/HEIF support (iPhone photos)
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+    HEIF_SUPPORTED = True
+except Exception:  # pragma: no cover - optional dependency
+    HEIF_SUPPORTED = False
+
+SUPPORTED = "PNG, JPEG, GIF, BMP, WEBP, TIFF" + (", HEIC" if HEIF_SUPPORTED else "")
+
+# decode statistics for /stats (per uvicorn worker)
+STATS: Counter[str] = Counter()
+_stats_lock = threading.Lock()
 
 
 def zbar_available() -> bool:
@@ -48,6 +63,19 @@ def dmtx_available() -> bool:
         return True
     except Exception:
         return False
+
+
+def zxing_available() -> bool:
+    try:
+        import zxingcpp  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
+
+def engines() -> dict[str, bool]:
+    return {"zxingcpp": zxing_available(), "zbar": zbar_available(), "libdmtx": dmtx_available(), "heif": HEIF_SUPPORTED}
 
 
 def _sniff(content: bytes) -> str | None:
@@ -80,7 +108,7 @@ def _open_image(content: bytes) -> Image.Image:
     except Exception:
         kind = _sniff(content)
         if kind == "HEIC/HEIF":
-            raise RenderError("HEIC/HEIF photos (iPhone default) cannot be read; export or share the photo as JPEG, or set the camera to 'Most compatible'") from None
+            raise RenderError("HEIC/HEIF photos (iPhone default) cannot be read on this server; export or share the photo as JPEG") from None
         if kind:
             raise RenderError(f"{kind} files cannot be decoded; upload a raster image ({SUPPORTED})") from None
         raise RenderError(f"file is not a readable image ({SUPPORTED})") from None
@@ -104,6 +132,51 @@ class DecodeResult:
         }
 
 
+# ------------------------------------------------------------------ zxing-cpp
+# zxing-cpp format names -> the zbar style names the API has always used
+_ZXING_TYPES = {
+    "QR Code": "QRCODE", "QR Code Model 1": "QRCODE", "QR Code Model 2": "QRCODE", "Micro QR Code": "MICROQR", "rMQR Code": "RMQR",
+    "Data Matrix": "DATAMATRIX", "Aztec": "AZTEC", "Aztec Code": "AZTEC", "Aztec Rune": "AZTECRUNE", "PDF417": "PDF417",
+    "Compact PDF417": "PDF417", "MicroPDF417": "MICROPDF417", "MaxiCode": "MAXICODE",
+    "EAN-13": "EAN13", "EAN-8": "EAN8", "EAN-2": "EAN2", "EAN-5": "EAN5", "UPC-A": "UPCA", "UPC-E": "UPCE", "ISBN": "ISBN",
+    "Code 128": "CODE128", "Code 39": "CODE39", "Code 39 Extended": "CODE39", "Code 39 Standard": "CODE39", "Code 32": "CODE32",
+    "Pharmazentralnummer": "PZN", "Code 93": "CODE93", "ITF": "I25", "ITF-14": "ITF14", "Codabar": "CODABAR",
+    "DataBar": "DATABAR", "DataBar Omni": "DATABAR", "DataBar Stacked": "DATABAR", "DataBar Stacked Omni": "DATABAR",
+    "DataBar Limited": "DATABAR_LTD", "DataBar Expanded": "DATABAR_EXP", "DataBar Expanded Stacked": "DATABAR_EXP",
+    "Telepen": "TELEPEN", "Telepen Alpha": "TELEPEN", "Telepen Numeric": "TELEPEN", "DX Film Edge": "DXFILMEDGE",
+}
+
+
+def _zxing_symbols(img: Image.Image, found_by: str, *, try_harder: bool, scale: float = 1.0, offset: tuple[int, int] = (0, 0)) -> list[dict[str, Any]]:
+    import zxingcpp
+
+    out: list[dict[str, Any]] = []
+    for r in zxingcpp.read_barcodes(img, try_rotate=try_harder, try_downscale=try_harder, try_invert=try_harder):
+        if not r.valid or not r.text and not r.bytes:
+            continue
+        fmt = str(r.format)
+        pos = r.position
+        pts = [(pos.top_left.x, pos.top_left.y), (pos.top_right.x, pos.top_right.y), (pos.bottom_right.x, pos.bottom_right.y), (pos.bottom_left.x, pos.bottom_left.y)]
+        pts = [(round(x / scale) + offset[0], round(y / scale) + offset[1]) for x, y in pts]
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        out.append(
+            {
+                "type": _ZXING_TYPES.get(fmt, fmt.upper().replace(" ", "").replace("-", "")),
+                "data": r.text or _decode_bytes(r.bytes),
+                "quality": None,
+                "rect": {"left": min(xs), "top": min(ys), "width": max(xs) - min(xs), "height": max(ys) - min(ys)},
+                "polygon": [{"x": x, "y": y} for x, y in pts],
+                "engine": "zxingcpp",
+                "found_by": found_by,
+                "format": fmt,
+                "ec_level": r.ec_level or None,
+                "symbology_identifier": r.symbology_identifier or None,
+            }
+        )
+    return out
+
+
+# ----------------------------------------------------------------------- zbar
 def _flatten(gray: Image.Image, radius: int) -> Image.Image:
     """Remove slow illumination gradients: gray - blur(gray) + 128."""
     background = gray.filter(ImageFilter.GaussianBlur(radius))
@@ -193,19 +266,20 @@ def _dmtx_symbols(gray: Image.Image, timeout_ms: int) -> list[dict[str, Any]]:
     return out
 
 
+# ------------------------------------------------------------------- pipeline
 def decode_image(content: bytes, *, try_harder: bool = True, budget: float | None = None) -> list[dict[str, Any]]:
     """Return every symbol found in the image (compatibility wrapper around :func:`decode_image_full`)."""
     return decode_image_full(content, try_harder=try_harder, budget=budget).symbols
 
 
 def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float | None = None) -> DecodeResult:
-    """Decode with the pre-processing ladder; stops at the first pass that finds something."""
+    """Decode with every engine; stops at the first pass that finds something."""
     t0 = time.monotonic()
     budget = settings.decode_budget if budget is None else budget
     img = _open_image(content)
     result = DecodeResult(width=img.width, height=img.height)
     gray = img.convert("L")
-    have_zbar, have_dmtx = zbar_available(), dmtx_available()
+    have_zxing, have_zbar, have_dmtx = zxing_available(), zbar_available(), dmtx_available()
     seen: set[tuple[str, str]] = set()
 
     def add(symbols: list[dict[str, Any]]) -> None:
@@ -215,15 +289,38 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
                 seen.add(key)
                 result.symbols.append(s)
 
+    def over_budget() -> bool:
+        return result.passes > 0 and time.monotonic() - t0 > budget
+
     timed_out = False
-    if have_zbar:
-        for name, variant, scale in _variants(gray, try_harder):
-            if result.passes and time.monotonic() - t0 > budget:
+    if have_zxing:
+        # zxing-cpp searches rotated, inverted and downscaled copies itself; a sharpened copy helps with blurry photos
+        passes: list[tuple[str, Image.Image]] = [("zxing/plain", gray)]
+        if try_harder:
+            passes.append(("zxing/sharpen", gray.filter(ImageFilter.UnsharpMask(radius=2, percent=180, threshold=2))))
+            passes.append(("zxing/flat", ImageOps.autocontrast(_flatten(gray, max(8, min(gray.size) // 40)), cutoff=1)))
+        for name, variant in passes:
+            if over_budget():
                 timed_out = True
                 break
             result.passes += 1
             try:
-                found = _zbar_symbols(variant, scale, name)
+                found = _zxing_symbols(variant, name, try_harder=try_harder)
+            except Exception as exc:  # pragma: no cover
+                log.warning("zxingcpp failed on %s: %s", name, exc)
+                found = []
+            if found:
+                add(found)
+                break
+
+    if have_zbar and not result.symbols and not timed_out:
+        for name, variant, scale in _variants(gray, try_harder):
+            if over_budget():
+                timed_out = True
+                break
+            result.passes += 1
+            try:
+                found = _zbar_symbols(variant, scale, "zbar/" + name)
             except Exception as exc:  # pragma: no cover - zbar internal assertion
                 log.warning("zbar failed on pass %s: %s", name, exc)
                 found = []
@@ -231,7 +328,7 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
                 add(found)
                 break
 
-    # DataMatrix is not covered by zbar; only spend the (slow) libdmtx time when nothing else was found
+    # DataMatrix fallback: only spend the (slow) libdmtx time when nothing else was found
     if have_dmtx and not result.symbols:
         remaining = budget - (time.monotonic() - t0)
         if remaining > 0.3:
@@ -243,25 +340,42 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
 
     result.elapsed_ms = int((time.monotonic() - t0) * 1000)
     if not result.symbols:
-        result.hints = _hints(img, have_zbar, have_dmtx, timed_out)
+        result.hints = _hints(img, have_zxing or have_zbar, have_zxing or have_dmtx, timed_out)
+    with _stats_lock:
+        STATS["images"] += 1
+        STATS["symbols"] += len(result.symbols)
+        STATS["found" if result.symbols else "nothing_found"] += 1
+        for s in result.symbols:
+            STATS["pass:" + s["found_by"]] += 1
+            STATS["type:" + s["type"]] += 1
+        if timed_out:
+            STATS["timed_out"] += 1
     log.info("decode: %dx%d %d symbol(s) in %d ms after %d pass(es)%s", img.width, img.height, len(result.symbols), result.elapsed_ms, result.passes,
              " - " + ", ".join(f"{s['type']} via {s['found_by']}" for s in result.symbols) if result.symbols else "")
     return result
 
 
-def _hints(img: Image.Image, have_zbar: bool, have_dmtx: bool, timed_out: bool) -> list[str]:
+def decode_stats() -> dict[str, Any]:
+    with _stats_lock:
+        return {"engines": engines(), **dict(sorted(STATS.items()))}
+
+
+def _hints(img: Image.Image, have_1d: bool, have_2d: bool, timed_out: bool) -> list[str]:
     hints = []
     longest = max(img.size)
     if longest < 200:
         hints.append("the image is very small; a QR code needs at least ~3 pixels per module to be readable")
     if longest > 3000:
         hints.append("large photo: make sure the code fills a good part of the frame and is in focus")
-    hints.append("readable symbologies: QR Code, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar, PDF417" + (", DataMatrix" if have_dmtx else "") + " (not Micro QR, Aztec or MaxiCode)")
+    if zxing_available():
+        hints.append("readable symbologies: QR Code, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar")
+    else:
+        hints.append("readable symbologies: QR Code, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar, PDF417" + (", DataMatrix" if dmtx_available() else ""))
     hints.append("try a sharper, evenly lit photo taken straight on, with some white space around the code")
     if timed_out:
         hints.append("the time budget for pre-processing passes ran out (CODEFORGE_DECODE_BUDGET)")
-    if not have_zbar:
-        hints.append("zbar is not installed on this server")
+    if not have_1d:
+        hints.append("no decoder library is installed on this server")
     return hints
 
 

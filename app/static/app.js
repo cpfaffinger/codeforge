@@ -505,4 +505,5 @@
     } else if (tab === "barcode" && !textInput.value) { $("#example-barcode").click(); }
   }
   init();
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
 })();

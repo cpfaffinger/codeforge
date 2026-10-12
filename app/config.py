@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     cors_origins: str = Field("*", description="Comma separated list of allowed CORS origins, empty to disable CORS headers.")
 
     # abuse protection
-    rate_limit: str = Field("300/minute", description="Requests per client IP, e.g. 300/minute, 2000/hour, 0 = disabled. The showcase alone loads ~110 images.")
+    rate_limit: str = Field("300/minute", description="Requests per client IP and uvicorn worker process (the counter is in-memory per process, so the effective limit is this value times CODEFORGE_WORKERS), e.g. 300/minute, 2000/hour, 0 = disabled. The showcase alone loads ~110 images.")
     trust_proxy: bool = Field(True, description="Use X-Forwarded-For / X-Real-IP to identify the client (behind nginx).")
     max_data_length: int = Field(4000, description="Maximum length of the encoded text.")
     max_scale: int = Field(30, description="Maximum scale / box size.")

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 - 2026-10-12
+
+* **decoder engine**: zxing-cpp is the primary decoder (QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar, several codes per image, own rotation/inversion/multi-scale search); the zbar pre-processing ladder and libdmtx remain as fallbacks. Results carry the precise `format`, `ec_level` and `symbology_identifier`
+* **HEIC/HEIF photos** (iPhone default) are decoded directly via pillow-heif
+* **scanner**: zxing-wasm (the C++ decoder compiled to WebAssembly, served from this site) replaces the unmaintained zxing-js as the in-browser engine after BarcodeDetector: DataMatrix, Aztec, Micro QR, rMQR, PDF417, MaxiCode and several codes per frame; zxing-js stays as a last fallback before the server
+* **installable**: web app manifest, icons and a service worker make the scanner an "add to home screen" app that opens straight into the camera (Install button on supported browsers)
+* option descriptions for every encoder option from the BWIPP wiki (`app/data/option_docs.json`, `tools/extract_option_docs.py`), symbology-specific notes first
+* `/api/v1/symbologies` is gzip-compressed (~500 kB -> ~60 kB) and carries an ETag with one-hour caching; static assets are version-stamped (`app.js?v=1.4.0`) so deploys never serve stale JavaScript
+* `/stats` reports decoder counters (images, hits, per pass, per type) next to the Ghostscript pool; `/healthz` lists `zxingcpp`
+* data length validation accepts the widest range when several rules apply; the rate limit is documented as per worker process
+* Playwright end-to-end tests (`tests/e2e`): scanner with a simulated camera, options panel, decode upload, showcase
+
 ## 1.3.0 - 2026-10-12
 
 * **scanner fixed**: the ZXing video path of the vendored library never returned a result, so live scanning only worked in browsers with a working BarcodeDetector. The scanner now grabs frames itself (full frame, centre crop and inverted passes at ~11 fps) and decodes them with BarcodeDetector (verified by a self-test, Chrome on Windows/Linux lists formats it cannot detect), ZXing, or as a last resort the codeforge API

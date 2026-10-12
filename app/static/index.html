@@ -6,7 +6,10 @@
 <title>codeforge playground</title>
 <meta name="description" content="Generate and decode QR codes and 100+ barcode symbologies. API with OpenAPI docs.">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=__VERSION__">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 </head>
 <body>
 <header class="top">
@@ -214,6 +217,6 @@ curl -X POST <span class="decode-api-url3"></span> -H "Content-Type: application
   codeforge - QR codes by <a href="https://github.com/heuer/segno">segno</a>, barcodes by <a href="https://github.com/bwipp/postscriptbarcode">BWIPP</a> via <a href="https://github.com/adamchainz/treepoem">treepoem</a>, decoding by <a href="https://github.com/mchehab/zbar">zbar</a>. MIT licensed.
 </footer>
 <div id="toast" class="toast" hidden></div>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=__VERSION__"></script>
 </body>
 </html>

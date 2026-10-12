@@ -1,0 +1,703 @@
+{
+ "_source": "https://github.com/bwipp/postscriptbarcode/wiki, extracted by tools/extract_option_docs.py",
+ "options": {
+  "Example": "An EAN-13 at GS1 SST 2 (general distribution) specification:",
+  "Note": "* Applies to text content set via textN (or alttext/extratext), not to encoder-positioned text.",
+  "Notes": "* Text1 defaults to centered below the symbol (or encoder-positioned when using includetext). * Text2 through text9 default to left-aligned above the symbol.",
+  "addondescent": "The addondescent option controls how far the add-on bars extend below the baseline, in multiples of the X-dimension (defaults to the value of guarddescent).",
+  "addongap": "The gap between the main barcode and the add-on, in points. Default is 12.",
+  "addontextfont": "The font name of the add-on text.",
+  "addontextsize": "The size of the add-on text, in points.",
+  "addontextxoffset": "Overrides the default horizontal positioning of the add-on text.",
+  "addontextyoffset": "Overrides the default vertical positioning of the add-on text.",
+  "altstartstop": "The altstartstop option specifies that the alternative set of delimiter characters is in use.",
+  "alttext": "Deprecated: The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding. You can use the alttext option to specify human-readable text.",
+  "append": "The append option specifies that this symbol is an alphanumeric continuation symbol (\"mode 1\").",
+  "ast": "Select an Application Specification Table profile. The default profile (default) provides the symbology's own specification values. Named profiles (e.g., gs1.sst1 through gs1.sst13) provide GS1-application-specific values.",
+  "backgroundcolor": "Color of the light background or light modules.",
+  "badmod11": "The badmod11 option allows a mod-11 checksum value of 10 to be encoded with a pair of check digits 10, with any checktype containing mod11. Normally any input whose checksum evaluates to 10 is considered invalid having no correct representation.",
+  "barcolor": "Color of the bars or dark modules.",
+  "barratio": "For linear barcodes, scales the width of the bars that are wider than one module, which sets the ratio of wide to narrow bars in symbologies such as Code 39, Codabar and Interleaved 2 of 5. A bar of n modules is drawn (n - 1) x barratio + 1 modules wide, so a narrow bar is unchanged and a wide bar of 3 modules becomes 2 modules at barratio=0.5 and 2.5 modules at barratio=0.75. Default: 1 (the symb",
+  "barxmult": "The barxmult option specifies the height of each row in modules, at least 34. The default is 34.",
+  "borderbottom": "Custom gap between the bottom edge of the symbol and the border or bearer bar, in points.",
+  "bordercolor": "Color of the border.",
+  "borderleft": "Custom gap between the left edge of the symbol and the border or bearer bars, in points.",
+  "borderright": "Custom gap between the right edge of the symbol and the border or bearer bars, in points.",
+  "bordertop": "Custom gap between the top edge of the symbol and the border or bearer bar, in points.",
+  "borderwidth": "Width of the border/bearers, in points.",
+  "c40headerlength": "The c40headerlength option specifies the number of leading characters in the data field that must be stored using C40 encodation.",
+  "cca": "Deprecated: Internal use. The cca option identifies this symbol as a CC-A 2D component of a GS1 Composite symbol. * Special size rules apply when the cca option is given, in which case the columns and rows options that are used to specify the size of the symbol must be one of: * 2x5, 2x6, 2x7, 2x8, 2x9, 2x10, 2x12, 3x4, 3x5, 3x6, 3x7, 3x8, 4x3, 4x4, 4x5, 4x6, 4x7",
+  "ccb": "Deprecated: Internal use. The ccb option identifies this symbol as a CC-B 2D component of a GS1 Composite symbol.",
+  "ccc": "Deprecated: Internal use. The ccc option identifies this symbol as a CC-C 2D component of a GS1 Composite symbol.",
+  "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+  "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+  "checktype": "The checktype option is used with includecheck or validatecheck to specify the type of checksum, either: * checktype=mod10 (default) * checktype=mod1010 * checktype=mod11 * checktype=ncrmod11 * checktype=mod1110 * checktype=ncrmod1110",
+  "columns": "The columns option specifies the number of columns (or groups of bars) in the output symbol, from 1 to 30.",
+  "compact": "Deprecated: Use Compact PDF417 instead. The compact option is used to create a compact/truncated PDF417 symbol that has fewer bars per row than a standard symbol and hence is more narrow.",
+  "custinfoenc": "Any remaining characters specify the customer information field, which FCCs 11, 45, 87 and 92 do not have. FCC 59 takes up to 8 digits or 5 characters, and FCC 62 up to 15 digits or 10 characters, in one of two alphabets: * The custinfoenc option should be supplied as custinfoenc=numeric if the customer information field is to be encoded using the numeric alphabet which can contain the digits 0-9.",
+  "dmre": "Deprecated: Consider Data Matrix Rectangular Extension. The dmre option enables Data Matrix Rectangular Extension symbols based on the ISO/IEC standard, which increases the number of rectangular symbol sizes available.",
+  "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+  "dotty": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+  "ecaddchars": "The ecaddchars option is used to specify how many additional error correction characters to add after applying the eclevel percentage, 3 or more, by default 3.",
+  "eclevel": "The eclevel option is used to specify the percentage of error correction to be applied when expanding the data, from 5 to 95, by default 23.",
+  "extratextcolor": "Color of the text for a given text group.",
+  "extratextdirection": "The textNdirection option is used to specify in which direction to orient text for a given text group.",
+  "extratextfont": "The PostScript font name for a text group.",
+  "extratextgaps": "The inter-character spacing of a text group.",
+  "extratextlinegaps": "Specify the gap between consecutive text lines for a text group.",
+  "extratextsize": "The font size of a text group in points.",
+  "extratextsplit": "Specify a character by which to split the text content into separate lines.",
+  "extratextsubspace": "Specify a set of characters that will be replaced with spaces within the text content.",
+  "extratextxalign": "The textNxalign option is used to specify where to horizontally position the text for a given text group.",
+  "extratextxoffset": "The horizontal position of the text in points relative to the leftmost bar or modules.",
+  "extratextyalign": "The textNyalign option is used to specify where to vertically position the text for a given text group.",
+  "extratextyoffset": "The vertical position of the text in points relative to the base of the bars or modules.",
+  "fast": "Deprecated. The fast option is used to enable the optional high-speed symbol masking algorithm.",
+  "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+  "format": "The format option is used to specify the shape of the symbol, either square (default) or rectangle.",
+  "griddpi": "Specify the target resolution for grid-aligned module boundaries, in dots per inch. This can be useful if the target device's resolution cannot be probed.",
+  "gridfit": "When enabled, the renderer adjusts the symbol scale so that module boundaries align to the device pixel grid, eliminating anti-aliasing artefacts.",
+  "guarddescent": "The guarddescent option controls how far the guard bars extend below the data bars, in multiples of the X-dimension (default: 5).",
+  "guardheight": "Height of the whitespace guards, in points.",
+  "guardleftpos": "Override the default horizontal position of the left whitespace guard.",
+  "guardleftypos": "Override the default vertical position of the left whitespace guard.",
+  "guardrightpos": "Override the default horizontal position of the right whitespace guard.",
+  "guardrightypos": "Override the default vertical position of the right whitespace guard.",
+  "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+  "guardwidth": "Width of the whitespace guards, in points.",
+  "hdim": "Directly specify the bar height in millimetres. Overrides the nominal height from the AST. Linear barcodes only.",
+  "height": "Height of longest bar, in inches.",
+  "hidestars": "The hidestars option suppresses the asterisks in the human readable text.",
+  "hnom": "Override the nominal bar height in millimetres. Normally provided by the AST. Linear barcodes only.",
+  "includecheck": "The includecheck option calculates the check digit.",
+  "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+  "includestartstop": "The includestartstop option adds start and stop bars.",
+  "includetext": "The includetext option should normally be supplied.",
+  "inkspread": "The inkspread option can be used to adjust the width of the bars.",
+  "inkspreadh": "For matrix barcodes, the amount by which to reduce the width of dark modules to compensate for inkspread, in points.",
+  "inkspreadv": "For matrix barcodes, the amount by which to reduce the height of dark modules to compensate for inkspread, in points.",
+  "layers": "The layers option is used to specify a particular number of layers in which to encode the data, between 1 and 32. By default the encoder will create a symbol with the minimal number of layers to encode the given data.",
+  "legacy": "Deprecated. The legacy option shows the ISBN-10 above the symbol in place of the ISBN-13. The bars are the same.",
+  "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component.",
+  "linkagea": "Deprecated: For internal use. The linkagea option specifies that the symbol includes a CC-A or CC-B GS1 composite 2D component.",
+  "linkagec": "Deprecated: For internal use. The linkagec option specifies that the symbol includes a CC-C GS1 composite 2D component.",
+  "loosespec": "Enable best-fit specification mode. The symbol is rendered at its correct physical dimensions when specification data is available. When the specification data is incomplete (e.g. no nominal X-dimension) or the effective X-dimension falls outside specification bounds, the symbol is rendered without error using the best available dimensions.",
+  "mag": "Magnification factor for physical specification mode. Scales the symbol relative to its nominal specification dimensions. Default: 1.0 (100%).",
+  "mask": "The mask option is used to specify the mask pattern, 1 to 4. If unspecified the encoder selects the best mask.",
+  "mode": "The mode option is used to specify how the data is structured in the symbol: * mode=2 - Formatted data containing a Structured Carrier Message with a numeric (US domestic) postal code. * mode=3 - Formatted data containing a Structured Carrier Message with an alphanumeric (international) postal code. * mode=4 - Unstructured extended ASCII data using standard error correction. * mode=5 - Unstructure",
+  "numeric": "Deprecated: Use Telepen Numeric instead. When the numeric option is given, the data is read as either pairs of digits or 0X, 1X, etc. The singular values ^000 to ^015 and ^127 can also be encoded using the parse option.",
+  "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+  "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 DataMatrix for encoding GS1 AI syntax data. * ^PROG: PROG - Reader programming * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the da",
+  "permitaddon": "When the permitaddon option is provided, the initial seven or eight digits can be followed by a space then two or five digits where a EAN-2 or EAN-5 add-on is required (non-standard).",
+  "propspec": "Enable proportional specification mode. The symbol stays at 1 point per module but bar heights are adjusted to match the specification's height-to-width ratio. The derived height is rounded to a whole number of points so that bars remain pixel-locked at 72 DPI.",
+  "pzn8": "The pzn8 option specifies that a PZN8 symbol is required, in which case the data field must contain seven digits or eight digits.",
+  "ratio": "The ratio option sets the width-to-height ratio of the symbol. The default is 1.5.",
+  "raw": "The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding.",
+  "readerinit": "The readerinit option denotes that the symbol is used for programming the barcode reader. Reader programming is only compatible with 1- to 22-layer full-range Aztec Code symbols, so layers must also be given, from 1 to 22.",
+  "rowheight": "The rowheight option specifies the height of the bars in each row in modules, from 8 to 50. The default is 8.",
+  "rowmult": "The rowmult option is used to specify how tall each bar is, with respect to the minimum module width. The default is 3.",
+  "rows": "The columns and rows options are used to specify the size of the symbol.",
+  "sam": "The sam option specifies this symbol to be part of multi-part structured data held in up to nine symbols. For example sam=25 specifies this to be the second symbol in a group of five symbols.",
+  "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+  "samparity": "The sampos, samtotal and samparity options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samparity is the parity of the whole message, from 0 to 255, and is the same in ",
+  "samtotal": "The sampos and samtotal options are an alternative to sam that give the position and the total separately, for example sampos=2 samtotal=5. They cannot be combined with sam.",
+  "segments": "The segments option is used to specify the maximum number of segments per row, an even number from 2 to 22. The default is 4.",
+  "semi": "The semi option enables conformance to the SEMI standard by enabling start and stop bars and a check character, which is placed in the second position rather than appended. The data must be 7 to 18 characters.",
+  "sepheight": "The sepheight option specifies the height of the separator bars enclosing the rows in modules, from 1 to 5. The default is 1.",
+  "shortfinder": "The shortfinder option generates a symbol with a shortened finder pattern.",
+  "showbearer": "Display bearer bars above and below the graphical (non-text) components of the symbol, e.g. bar/space array, matrix, composite separator. By default the bearer bars will designate the symbol's quiet zone.",
+  "showborder": "Display a border around the graphical (non-text) components of the symbol, e.g. bar/space array, matrix, composite separator. By default the border (and any background) will designate the symbol's quiet zone.",
+  "spaceratio": "For linear barcodes, scales the width of the spaces that are wider than one module, in the same way as barratio does for bars. A space of n modules is drawn (n - 1) x spaceratio + 1 modules wide. Default: 1.",
+  "strictspec": "Enable strict physical specification mode. The renderer scales the symbol to its correct physical dimensions in millimetres, based on the nominal X-dimension and height from the symbology's specification or selected Application Specification Table (ast).",
+  "suppresskanjimode": "Deprecated: The suppresskanjimode option will prevent the use of Kanji Mode internal encodation. Some readers erroneously consider a Kanji Mode section as an indication that the affected part of the message should be interpreted using a Shift-JIS character set rather than as a data compaction strategy.",
+  "swidth": "The nwidth, wwidth and swidth options can be used to specify a custom width, in modules, for the narrow bars, wide bars and inter-bar spaces respectively. The defaults are 1, 3 and 2.",
+  "textcolor": "Color of the text for a given text group.",
+  "textdirection": "The textNdirection option is used to specify in which direction to orient text for a given text group.",
+  "textfont": "The PostScript font name for a text group.",
+  "textgaps": "The inter-character spacing of a text group.",
+  "textlinegaps": "Specify the gap between consecutive text lines for a text group.",
+  "textsize": "The font size of a text group in points.",
+  "textsplit": "Specify a character by which to split the text content into separate lines.",
+  "textsubspace": "Specify a set of characters that will be replaced with spaces within the text content.",
+  "textxalign": "The textNxalign option is used to specify where to horizontally position the text for a given text group.",
+  "textxoffset": "The horizontal position of the text in points relative to the leftmost bar or modules.",
+  "textyalign": "The textNyalign option is used to specify where to vertically position the text for a given text group.",
+  "textyoffset": "The vertical position of the text in points relative to the base of the bars or modules.",
+  "type": "The mandatory type option is used to specify the size of the symbol, either 7 (24x24), 9 (32x32) or 29 (16x48).",
+  "unidirectional": "The unidirectional option generates a unidirectional Plessey symbol.",
+  "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong.",
+  "version": "The version option is used to specify the size of the symbol, 1 to 40.",
+  "width": "Stretch the symbol to precisely this width, in inches.",
+  "xdim": "Directly specify the X-dimension (narrow bar width or module size) in millimetres. Overrides the nominal value from the AST.",
+  "xmax": "Override the maximum allowed X-dimension in millimetres. Normally provided by the AST.",
+  "xmin": "Override the minimum allowed X-dimension in millimetres. Normally provided by the AST.",
+  "xnom": "Override the nominal X-dimension in millimetres. Normally provided by the Application Specification Table (AST), but can be set by the user."
+ },
+ "encoders": {
+  "auspost": {
+   "custinfoenc": "Any remaining characters specify the customer information field, which FCCs 11, 45, 87 and 92 do not have. FCC 59 takes up to 8 digits or 5 characters, and FCC 62 up to 15 digits or 10 characters, in one of two alphabets: * The custinfoenc option should be supplied as custinfoenc=numeric if the customer information field is to be encoded using the numeric alphabet which can contain the digits 0-9."
+  },
+  "azteccode": {
+   "ecaddchars": "The ecaddchars option is used to specify how many additional error correction characters to add after applying the eclevel percentage, 3 or more, by default 3.",
+   "eclevel": "The eclevel option is used to specify the percentage of error correction to be applied when expanding the data, from 5 to 95, by default 23.",
+   "format": "Deprecated: Consider Compact Aztec Code instead. The format option can also be used to create Compact Aztec Code symbols, using format=compact.",
+   "layers": "The layers option is used to specify a particular number of layers in which to encode the data, between 1 and 32. By default the encoder will create a symbol with the minimal number of layers to encode the given data.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. * ECIs are not available with FNC1 in first or",
+   "raw": "The raw option denotes that the data field is providing the input as a pre-encoded bitstream suitable for direct low-level encoding.",
+   "readerinit": "The readerinit option denotes that the symbol is used for programming the barcode reader. Reader programming is only compatible with 1- to 22-layer full-range Aztec Code symbols, so layers must also be given, from 1 to 22.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 26 symbols, which a reader reassembles into a single message. sampos and samtotal are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is an optional message ID, which is the same in every symbol of the "
+  },
+  "azteccodecompact": {
+   "ecaddchars": "The ecaddchars option is used to specify how many additional error correction characters to add after applying the eclevel percentage, 3 or more, by default 3.",
+   "eclevel": "The eclevel option is used to specify the percentage of error correction to be applied when expanding the data, from 5 to 95, by default 23.",
+   "layers": "The layers option is used to specify a particular number of layers in which to encode the data, between 1 and 4. By default the encoder will create a symbol with the minimal number of layers to encode the given data.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. * ECIs are not available with FNC1 in first or",
+   "raw": "The raw option denotes that the data field is providing the input as a pre-encoded bitstream suitable for direct low-level encoding.",
+   "readerinit": "The readerinit option denotes that the symbol is used for programming the barcode reader. Reader programming is only compatible with 1-layer Compact Aztec Code symbols.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 26 symbols, which a reader reassembles into a single message. sampos and samtotal are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is an optional message ID, which is the same in every symbol of the "
+  },
+  "bc412": {
+   "includecheck": "The includecheck option calculates the check character.",
+   "includecheckintext": "The includecheckintext option makes the calculated check character appear in the human readable text.",
+   "includestartstop": "The includestartstop option adds start and stop bars.",
+   "inkspread": "The inkspread option can be used to adjust the width of the bars.",
+   "semi": "The semi option enables conformance to the SEMI standard by enabling start and stop bars and a check character, which is placed in the second position rather than appended. The data must be 7 to 18 characters.",
+   "validatecheck": "The validatecheck option takes the last character of the data (the second with semi) to be the check character and refuses the data if it is wrong."
+  },
+  "channelcode": {
+   "includecheck": "The includecheck option appends an optional check bar suffix.",
+   "shortfinder": "The shortfinder option generates a symbol with a shortened finder pattern."
+  },
+  "codablockf": {
+   "columns": "The columns option specifies the number of columns in the symbol, from 4 to 62, default 8.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^FNC3: FNC3",
+   "rowheight": "The rowheight option specifies the height of the bars in each row in modules, from 8 to 50. The default is 10.",
+   "rows": "The rows option specifies the number of rows in the symbol, between 2 and 44.",
+   "sepheight": "The sepheight option specifies the height of the separator bars enclosing the rows in modules, from 1 to 5. The default is 1."
+  },
+  "code11": {
+   "includecheck": "The includecheck option calculates the check digits.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digits appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data (the last two digits when the data is twelve or more characters long) to be the check digits and refuses the data if they are wrong."
+  },
+  "code128": {
+   "alttext": "Deprecated: The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding. You can use the alttext option to specify human-readable text.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII or extended-ASCII value, useful for specifying unprintable characters, e.g. ^029 for GS, ^209 for Ñ, etc.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1-128 for encoding GS1 AI syntax data. * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. The human readable tex",
+   "raw": "Deprecated: The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding. You can use the alttext option to specify human-readable text."
+  },
+  "code16k": {
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^FNC2: FNC2 * ^FNC3: FNC3 * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. It is not available with Structured Append.",
+   "raw": "The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding.",
+   "rowheight": "The rowheight option specifies the height of the bars in each row in modules, from 8 to 50. The default is 8.",
+   "rows": "The rows option specifies the number of rows in the symbol, between two and sixteen.",
+   "sam": "The sam option specifies this symbol to be part of multi-part structured data held in up to nine symbols. For example sam=25 specifies this to be the second symbol in a group of five symbols.",
+   "samtotal": "The sampos and samtotal options are an alternative to sam that give the position and the total separately, for example sampos=2 samtotal=5. They cannot be combined with sam.",
+   "sepheight": "The sepheight option specifies the height of the separator bars enclosing the rows in modules, from 1 to 5. The default is 1."
+  },
+  "code2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong.",
+   "version": "Deprecated: The version option determines which variant to use: * version=industrial (default) - Industrial 2 of 5. * version=iata - Deprecated: Consider IATA 2 of 5 * version=datalogic - Deprecated: Consider Datalogic 2 of 5 * version=matrix - Deprecated: Consider Matrix 2 of 5 * version=coop - Deprecated: Consider COOP 2 of 5"
+  },
+  "code39": {
+   "hidestars": "The hidestars option suppresses the asterisks in the human readable text.",
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "code39ext": {
+   "hidestars": "The hidestars option suppresses the asterisks in the human readable text.",
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters, e.g. ^029 for GS, etc.",
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character, calculated over the shift-encoded Code 39 characters, and refuses the data if it is wrong."
+  },
+  "code49": {
+   "append": "The append option specifies that this symbol is an alphanumeric continuation symbol (\"mode 1\").",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^FNC2: FNC2 * ^FNC3: FNC3 * ^FNC@: FNC1 in second position, written before an AIM application indicator at the start of the data, e.g. ^FNC@T.... See FNC1 in second position. Code 49 can encode an upper case letter, or a lower case letter except with append, but not two digits.",
+   "rowheight": "The rowheight option specifies the height of the bars in each row in modules, from 8 to 50. The default is 8.",
+   "rows": "The rows option specifies the number of rows in the symbol, between 2 and 8.",
+   "sam": "The sam option specifies this symbol is part of multi-part structured data held in up to nine \"mode 3\" symbols. For example sam=25 specifies this to be the second symbol in a group of five symbols.",
+   "samtotal": "The sampos and samtotal options are an alternative to sam that give the position and the total separately, for example sampos=2 samtotal=5. They cannot be combined with sam.",
+   "sepheight": "The sepheight option specifies the height of the separator bars enclosing the rows in modules, from 1 to 5. The default is 1."
+  },
+  "code93": {
+   "includecheck": "The includecheck option calculates the two check digits.",
+   "parsefnc": "Deprecated: For internal use. The parsefnc option allows the special shift characters to be supplied as escape sequences: * ^SFT$: ($) * ^SFT%: (%) * ^SFT/: (/) * ^SFT+: (+)",
+   "validatecheck": "The validatecheck option takes the last two characters of the data to be the check characters C and K and refuses the data if they are wrong. A check character that is a shift character is given as ^SFT$, ^SFT%, ^SFT/ or ^SFT+ with parsefnc."
+  },
+  "code93ext": {
+   "includecheck": "The includecheck option calculates the two check digits.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters, e.g. ^029 for GS, etc.",
+   "validatecheck": "The validatecheck option is not available, since the check characters need not be ASCII characters."
+  },
+  "codeone": {
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters, e.g. ^029 for GS, etc.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^FNC3: FNC3 * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. * ECIs are not available with FN",
+   "samtotal": "The sampos and samtotal options make the symbol one of a Structured Append sequence of 2 to 128 symbols, which a reader reassembles into a single message. Both are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. Up to 15 symbols are encoded in Group mode, and more in Extended Group mode. * Structured Append ",
+   "version": "The version option is used to specify the size and type of the symbol: * version=A to version=H - for standard format symbols (default automatic selection) * version=T-16, version=T-32, version=T-48 - T-type symbols * version=S-10, version=S-20, version=S-30 - S-type symbols"
+  },
+  "coop2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "databarexpanded": {
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component."
+  },
+  "databarexpandedcomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "databarexpandedstacked": {
+   "barxmult": "The barxmult option specifies the height of each row in modules, at least 34. The default is 34.",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component.",
+   "segments": "The segments option is used to specify the maximum number of segments per row, an even number from 2 to 22. The default is 4."
+  },
+  "databarexpandedstackedcomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "databarlimited": {
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component."
+  },
+  "databarlimitedcomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "databaromni": {
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component."
+  },
+  "databaromnicomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "databarstacked": {
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component."
+  },
+  "databarstackedcomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "databarstackedomni": {
+   "barxmult": "The barxmult option specifies the height of each row in modules, at least 33. The default is 33.",
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component."
+  },
+  "databarstackedomnicomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "databartruncated": {
+   "linkage": "Deprecated: For internal use. The linkage option signifies the presence of a GS1 composite 2D component."
+  },
+  "databartruncatedcomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "datalogic2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "datamatrix": {
+   "c40headerlength": "The c40headerlength option specifies the number of leading characters in the data field that must be stored using C40 encodation.",
+   "dmre": "Deprecated: Consider Data Matrix Rectangular Extension. The dmre option enables Data Matrix Rectangular Extension symbols based on the ISO/IEC standard, which increases the number of rectangular symbol sizes available.",
+   "dotty": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+   "format": "Deprecated: The format option is used to specify the shape of the symbol, either: * square (default) * rectangle: Consider Data Matrix Rectangular for rectangular symbols.",
+   "inkspread": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value. This is useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 DataMatrix for encoding GS1 AI syntax data. * ^PROG: PROG - Reader programming * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the da",
+   "raw": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+   "rows": "The columns and rows options are used to specify the size of the symbol.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC. Valid options are 10x10, 12x12, 14x14, 16x16, 18x18, 20x20, 22x22, 24x24, 26x26, 32x32, 36x36, 40x40, 44x44, 48x48, 52x52, 64x64, 72x72, 80x80, 88x88, 96x96, 104x104, 120x120, 132x132, 144x144"
+  },
+  "datamatrixrectangular": {
+   "c40headerlength": "The c40headerlength option specifies the number of leading characters in the data field that must be stored using C40 encodation.",
+   "dmre": "Deprecated: Consider Data Matrix Rectangular Extension. The dmre option enables Data Matrix Rectangular Extension symbols based on the ISO/IEC standard, which increases the number of rectangular symbol sizes available.",
+   "dotty": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+   "inkspread": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value. This is useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 DataMatrix for encoding GS1 AI syntax data. * ^PROG: PROG - Reader programming * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the da",
+   "raw": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+   "rows": "The columns and rows options are used to specify the size of the symbol.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC. Valid options are 8x18, 8x32, 12x26, 12x36, 16x36, 16x48."
+  },
+  "datamatrixrectangularextension": {
+   "c40headerlength": "The c40headerlength option specifies the number of leading characters in the data field that must be stored using C40 encodation.",
+   "dotty": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+   "inkspread": "When the dotty option is specified the modules are rendered as dots rather than squares. The dot radius can be adjusted using the inkspread option.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value. This is useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 DataMatrix for encoding GS1 AI syntax data. * ^PROG: PROG - Reader programming * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the da",
+   "raw": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+   "rows": "The columns and rows options are used to specify the size of the symbol.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samid is the file identification, from 1 to 64516, and is the same in every symbol o",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC. Valid options are 8x18, 8x32, 8x48, 8x64, 8x80, 8x96, 8x120, 8x144, 12x26, 12x36, 12x64, 12x88, 16x36, 16x48, 16x64, 20x36, 20x44, 20x64, 22x48, 24x48, 24x64, 26x40, 26x48, 26x64."
+  },
+  "dotcode": {
+   "fast": "Deprecated. The fast option is used to enable the optional high-speed symbol masking algorithm.",
+   "mask": "The mask option selects mask 0 to 3 instead of the best one.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value. This is useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 DotCode for encoding GS1 AI syntax data. * ^FNC3: FNC3 * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data or of a message segme",
+   "ratio": "The ratio option sets the width-to-height ratio of the symbol. The default is 1.5.",
+   "rows": "The columns and rows options are used to specify the size of the symbol, each from 5 to 200, with an odd sum. When these are not specified a symbol is generated that maintains the selected aspect ratio.",
+   "samtotal": "The sampos and samtotal options make the symbol one of a Structured Append sequence of 2 to 35 symbols, which a reader reassembles into a single message. Both are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * The position and total are encoded at the end of the data, followed by FNC2. * Structured Append"
+  },
+  "ean13": {
+   "addondescent": "The addondescent option controls how far the add-on bars extend below the baseline, in multiples of the X-dimension (defaults to the value of guarddescent).",
+   "guarddescent": "The guarddescent option controls how far the guard bars extend below the data bars, in multiples of the X-dimension (default: 5).",
+   "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "ean13composite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "ean14": {
+   "ast": "With strictspec, the ast option takes the GS1-128 application standards, such as ast=gs1.sst2 for trade items scanned in general distribution."
+  },
+  "ean2": {
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "ean5": {
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "ean8": {
+   "addondescent": "The addondescent option controls how far the add-on bars extend below the baseline, in multiples of the X-dimension (defaults to the value of guarddescent).",
+   "guarddescent": "The guarddescent option controls how far the guard bars extend below the data bars, in multiples of the X-dimension (default: 5).",
+   "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+   "includetext": "The includetext option should normally be supplied.",
+   "permitaddon": "When the permitaddon option is provided, the initial seven or eight digits can be followed by a space then two or five digits where a EAN-2 or EAN-5 add-on is required (non-standard)."
+  },
+  "ean8composite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "flattermarken": {
+   "inkspread": "The inkspread option can be used to adjust the width of the bars."
+  },
+  "gs1-128": {
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "linkagea": "Deprecated: For internal use. The linkagea option specifies that the symbol includes a CC-A or CC-B GS1 composite 2D component.",
+   "linkagec": "Deprecated: For internal use. The linkagec option specifies that the symbol includes a CC-C GS1 composite 2D component."
+  },
+  "gs1-128composite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "gs1-cc": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "gs1datamatrix": {
+   "ast": "With strictspec, the ast option sizes the symbol to a GS1 application standard, such as: * ast=gs1.sst6 - healthcare primary packaging, such as a blister or vial * ast=gs1.sst8 - healthcare packs also scanned in general distribution * ast=gs1.sst10 - healthcare packs dispensed to the patient, such as an outer pack carrying the EU Falsified Medicines Directive's unique identifier * ast=gs1.sst7.dpm",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "format": "The format option is used to specify the shape of the symbol, either square (default) or rectangle.",
+   "rows": "The columns and rows options are used to specify the size of the symbol.",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC. Valid options are: * With format=square: 10x10, 12x12, 14x14, 16x16, 18x18, 20x20, 22x22, 24x24, 26x26, 32x32, 36x36, 40x40, 44x44, 48x48, 52x52, 64x64, 72x72, 80x80, 88x88, 96x96, 104x104, 120x120, 132x132, 144x144 * With format=rectangle: 8x18, 8x32, 12x26, 12x36, 16x36, 16x48"
+  },
+  "gs1datamatrixrectangular": {
+   "ast": "With strictspec, the ast option sizes the symbol to a GS1 application standard, such as: * ast=gs1.sst6 - healthcare primary packaging, such as a blister or vial * ast=gs1.sst8 - healthcare packs also scanned in general distribution * ast=gs1.sst10 - healthcare packs dispensed to the patient, such as an outer pack carrying the EU Falsified Medicines Directive's unique identifier * ast=gs1.sst7.dpm",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "format": "The format option is used to specify the shape of the symbol, either square (default) or rectangle.",
+   "rows": "The columns and rows options are used to specify the size of the symbol.",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC. Valid options are: * With format=square: 10x10, 12x12, 14x14, 16x16, 18x18, 20x20, 22x22, 24x24, 26x26, 32x32, 36x36, 40x40, 44x44, 48x48, 52x52, 64x64, 72x72, 80x80, 88x88, 96x96, 104x104, 120x120, 132x132, 144x144 * With format=rectangle: 8x18, 8x32, 12x26, 12x36, 16x36, 16x48"
+  },
+  "gs1dldatamatrix": {
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "format": "The format option is used to specify the shape of the symbol, either square (default) or rectangle.",
+   "includetext": "The includetext option enables the display of HRI.",
+   "rows": "The columns and rows options are used to specify the size of the symbol.",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC. Valid options are: * With format=square: 10x10, 12x12, 14x14, 16x16, 18x18, 20x20, 22x22, 24x24, 26x26, 32x32, 36x36, 40x40, 44x44, 48x48, 52x52, 64x64, 72x72, 80x80, 88x88, 96x96, 104x104, 120x120, 132x132, 144x144 * With format=rectangle: 8x18, 8x32, 12x26, 12x36, 16x36, 16x48"
+  },
+  "gs1dlqrcode": {
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=L - Low * eclevel=M - Medium (default) * eclevel=Q - Quality * eclevel=H - High",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+   "includetext": "The includetext option enables the display of HRI.",
+   "version": "The version option is used to specify the size of the symbol, 1 to 40."
+  },
+  "gs1dotcode": {
+   "ast": "With strictspec, the ast option sizes the symbol to a GS1 application standard, such as ast=gs1.sst12.trade for tobacco unit packets.",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "fast": "Deprecated: Use only if performance is a concern. The fast option is used to enable the optional high-speed symbol masking algorithm.",
+   "ratio": "The ratio option is used to specify the aspect ratio of the symbol. The default is 1.5.",
+   "rows": "The columns and rows options are used to specify the size of the symbol. When these are not specified a symbol is generated that maintains the selected aspect ratio."
+  },
+  "gs1northamericancoupon": {
+   "includetext": "The includetext option shows the GS1 Company Prefix and Offer Code, separated by a dash, above the symbol.",
+   "segments": "The segments option is used to specify the maximum number of segments per row which must be an even number. The default is 4."
+  },
+  "gs1qrcode": {
+   "ast": "With strictspec, the ast option sizes the symbol to a GS1 application standard, such as ast=gs1.sst12.trade for tobacco unit packets (with eclevel=H) and ast=gs1.sst12.group for aggregated packaging.",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards.",
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=L - Low * eclevel=M - Medium (default) * eclevel=Q - Quality * eclevel=H - High",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+   "version": "The version option is used to specify the size of the symbol, 1 to 40."
+  },
+  "hanxin": {
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=L1 - Lowest * eclevel=L2 (default) * eclevel=L3 * eclevel=L4 - Highest",
+   "mask": "The mask option is used to specify the mask pattern, 1 to 4. If unspecified the encoder selects the best mask.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, ^FNC1 in the first position of the data selects GS1 mode. FNC1 cannot appear elsewhere.",
+   "version": "The version option is used to specify the size of the symbol, 1 to 84."
+  },
+  "hibcazteccode": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibccodablockf": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibccode128": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibccode39": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibcdatamatrix": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibcdatamatrixrectangular": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibcmicropdf417": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibcpdf417": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "hibcqrcode": {
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "iata2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "industrial2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong.",
+   "version": "Deprecated: The version option determines which variant to use: * version=industrial (default) - Industrial 2 of 5. * version=iata - Deprecated: Consider IATA 2 of 5 * version=datalogic - Deprecated: Consider Datalogic 2 of 5 * version=matrix - Deprecated: Consider Matrix 2 of 5 * version=coop - Deprecated: Consider COOP 2 of 5"
+  },
+  "interleaved2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated checksum appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "isbn": {
+   "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+   "includetext": "The includetext option should normally be supplied.",
+   "legacy": "Deprecated. The legacy option shows the ISBN-10 above the symbol in place of the ISBN-13. The bars are the same."
+  },
+  "ismn": {
+   "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+   "includetext": "The includetext option should normally be supplied.",
+   "legacy": "Deprecated. The legacy option shows the ISMN-10 above the symbol in place of the ISMN-13. The bars are the same."
+  },
+  "issn": {
+   "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "itf14": {
+   "borderwidth": "A bearer frame surrounding the symbol and its quiet zones is drawn by default (showborder). The GS1 General Specifications require one, with a nominal thickness of 4.83 mm, when the symbol is printed using printing plates, typically directly onto corrugated board. The borderwidth option sets its thickness.",
+   "showbearer": "The showbearer option draws bearer bars at the top and bottom only, in place of the frame, as allowed when the symbol is printed without printing plates."
+  },
+  "japanpost": {
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text."
+  },
+  "mailmark": {
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "type": "The mandatory type option is used to specify the size of the symbol, either 7 (24x24), 9 (32x32) or 29 (16x48)."
+  },
+  "mands": {
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "matrix2of5": {
+   "includecheck": "The includecheck option calculates the check digit.",
+   "includecheckintext": "The includecheckintext option makes the calculated check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "maxicode": {
+   "mode": "The mode option is used to specify how the data is structured in the symbol: * mode=2 - Formatted data containing a Structured Carrier Message with a numeric (US domestic) postal code. * mode=3 - Formatted data containing a Structured Carrier Message with an alphanumeric (international) postal code. * mode=4 - Unstructured extended ASCII data using standard error correction. * mode=5 - Unstructure",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^ECI000000 to ^ECI999999: ECI indicators",
+   "sam": "The sam option specifies this symbol to be part of multi-part structured data held in up to eight symbols. For example sam=25 specifies this to be the second symbol in a group of five symbols.",
+   "samtotal": "The sampos and samtotal options are an alternative to sam that give the position and the total separately, for example sampos=2 samtotal=5. They cannot be combined with sam."
+  },
+  "micropdf417": {
+   "cca": "Deprecated: Internal use. The cca option identifies this symbol as a CC-A 2D component of a GS1 Composite symbol. * Special size rules apply when the cca option is given, in which case the columns and rows options that are used to specify the size of the symbol must be one of: * 2x5, 2x6, 2x7, 2x8, 2x9, 2x10, 2x12, 3x4, 3x5, 3x6, 3x7, 3x8, 4x3, 4x4, 4x5, 4x6, 4x7",
+   "ccb": "Deprecated: Internal use. The ccb option identifies this symbol as a CC-B 2D component of a GS1 Composite symbol.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^ECI000000 to ^ECI811799: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. The symbol is encoded in Code 128 emulation, which readers r",
+   "raw": "The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding.",
+   "readerinit": "The readerinit option denotes that the symbol is used for programming the barcode reader. Every symbol of a Structured Append sequence for reader programming is given it. It is not available with the raw option or for GS1 Composite symbols.",
+   "rowmult": "The rowmult option is used to specify how tall each bar is, with respect to the minimum module width. The default is 2.",
+   "rows": "The columns and rows options are used to specify the size of the symbol. Valid values, as columns x rows, are: * 1x11, 1x14, 1x17, 1x20, 1x24, 1x28, 2x8, 2x11, 2x14, 2x17, 2x20, 2x23, 2x26, 3x6, 3x8, 3x10, 3x12, 3x15, 3x20, 3x26, 3x32, 3x38, 3x44, 4x4, 4x6, 4x8, 4x10, 4x12, 4x15, 4x20, 4x26, 4x32, 4x38, 4x44",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Structured Append sequence of 2 to 99999 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. It is encoded as the segment count, and the last symbol of the sequence is marked a",
+   "version": "The version option can also be used to specify the symbol size, as version=RxC (rows first), for example version=15x4."
+  },
+  "microqrcode": {
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=L - Low (default) * eclevel=M - Medium; Not compatible with M1 symbols * eclevel=Q - Quality; Only compatible with M4 symbols",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+   "mask": "The mask option is used to specify the mask pattern, 1 to 4. If unspecified the encoder selects the best mask.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "suppresskanjimode": "Deprecated: The suppresskanjimode option will prevent the use of Kanji Mode internal encodation. Some readers erroneously consider a Kanji Mode section as an indication that the affected part of the message should be interpreted using a Shift-JIS character set rather than as a data compaction strategy.",
+   "version": "The version option is used to specify the size of the symbol, either version=M1, version=M2, version=M3 or version=M4."
+  },
+  "msi": {
+   "badmod11": "The badmod11 option allows a mod-11 checksum value of 10 to be encoded with a pair of check digits 10, with any checktype containing mod11. Normally any input whose checksum evaluates to 10 is considered invalid having no correct representation.",
+   "checktype": "The checktype option is used with includecheck or validatecheck to specify the type of checksum, either: * checktype=mod10 (default) * checktype=mod1010 * checktype=mod11 * checktype=ncrmod11 * checktype=mod1110 * checktype=ncrmod1110",
+   "includecheck": "The includecheck option calculates the check digit or check digits.",
+   "includecheckintext": "The includecheckintext option makes the calculated check characters appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digits of the data to be the check digits of the checktype, as many as it adds, and refuses the data if they are wrong."
+  },
+  "pdf417": {
+   "ccc": "Deprecated: Internal use. The ccc option identifies this symbol as a CC-C 2D component of a GS1 Composite symbol.",
+   "columns": "The columns option specifies the number of columns (or groups of bars) in the output symbol, from 1 to 30.",
+   "compact": "Deprecated: Use Compact PDF417 instead. The compact option is used to create a compact/truncated PDF417 symbol that has fewer bars per row than a standard symbol and hence is more narrow.",
+   "eclevel": "The eclevel option is used to specify the error correction level, from 0 to 8. The default is to choose a standard level of error correction that is determined by the encoded data length.",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^ECI000000 to ^ECI811799: ECI indicators.",
+   "raw": "The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding.",
+   "readerinit": "The readerinit option denotes that the symbol is used for programming the barcode reader. Every symbol of a Macro PDF417 sequence for reader programming is given it. It is not available with the raw option or for GS1 Composite symbols.",
+   "rowmult": "The rowmult option is used to specify how tall each bar is, with respect to the minimum module width. The default is 3.",
+   "rows": "The rows option specifies the minimum number of rows in the symbol, from 3 to 90.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Macro PDF417 sequence of 2 to 99999 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. It is encoded as the segment count, and the last symbol of the sequence is marked as suc"
+  },
+  "pdf417compact": {
+   "columns": "The columns option specifies the number of columns (or groups of bars) in the output symbol, from 1 to 30.",
+   "eclevel": "The eclevel option is used to specify the error correction level, from 0 to 8. The default is to choose a standard level of error correction that is determined by the encoded data length.",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^ECI000000 to ^ECI811799: ECI indicators",
+   "raw": "The raw option denotes that the data field is providing the input as pre-encoded codewords in ^NNN format, suitable for direct low-level encoding.",
+   "readerinit": "The readerinit option denotes that the symbol is used for programming the barcode reader. Every symbol of a Macro PDF417 sequence for reader programming is given it. It is not available with the raw option.",
+   "rowmult": "The rowmult option is used to specify how tall each bar is, with respect to the minimum module width. The default is 3.",
+   "rows": "The rows option specifies the minimum number of rows in the symbol, from 3 to 90.",
+   "samid": "The sampos, samtotal and samid options make the symbol one of a Macro PDF417 sequence of 2 to 99999 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. It is encoded as the segment count, and the last symbol of the sequence is marked as suc"
+  },
+  "pharmacode": {
+   "swidth": "The nwidth, wwidth and swidth options can be used to specify a custom width, in modules, for the narrow bars, wide bars and inter-bar spaces respectively. The defaults are 1, 3 and 2."
+  },
+  "pharmacode2": {
+   "height": "The height option specifies the height of each of the two tracks in inches, so a full-height bar is twice as tall. The default is 4mm (height=0.1575)."
+  },
+  "planet": {
+   "includecheckintext": "The includecheckintext option makes the check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "plessey": {
+   "includecheckintext": "The includecheckintext option makes the calculated check characters appear in the human readable text.",
+   "unidirectional": "The unidirectional option generates a unidirectional Plessey symbol.",
+   "validatecheck": "The validatecheck option takes the last two characters of the data to be the check characters and refuses the data if they are wrong."
+  },
+  "posicode": {
+   "inkspread": "The inkspread option can be used to adjust the width of the bars.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters, e.g. ^029 for GS, etc.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^FNC2: FNC2 * ^FNC3: FNC3 * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See FNC1 in second position. It is not available in the limited versions.",
+   "version": "The version option is used to specify the variant of the symbol, either: * version=a (default) * version=b * version=limiteda * version=limitedb"
+  },
+  "postnet": {
+   "includecheckintext": "The includecheckintext option makes the check digit appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last digit of the data to be the check digit and refuses the data if it is wrong."
+  },
+  "pzn": {
+   "pzn8": "The pzn8 option specifies that a PZN8 symbol is required, in which case the data field must contain seven digits or eight digits."
+  },
+  "qrcode": {
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=L - Low * eclevel=M - Medium (default) * eclevel=Q - Quality * eclevel=H - High * A higher level lets the symbol be read with more of it damaged, such as by wear or by a logo printed over its centre, at the cost of a larger symbol. Some applications fix the level, such as M for an EPC QR Code or a Swiss QR-bill, and H for ",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the current matrix is possible.",
+   "format": "Deprecated: The format option is used to specify the symbol type, either: * full (default) * micro: Consider Micro QR Code for Micro QR Code symbols. * rmqr: Consider Rectangular Micro QR Code for rMQR symbols.",
+   "mask": "The mask option is used to specify the mask pattern, 1 to 8. If unspecified the encoder selects the best mask.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 QR Code for encoding GS1 AI syntax data. * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... or ^FNC@99.... See ",
+   "samparity": "The sampos, samtotal and samparity options make the symbol one of a Structured Append sequence of 2 to 16 symbols, which a reader reassembles into a single message. All three are required: * sampos is the position of the symbol in the sequence, from 1 to samtotal. * samtotal is the number of symbols in the sequence. * samparity is the parity of the whole message, from 0 to 255, and is the same in ",
+   "suppresskanjimode": "Deprecated: The suppresskanjimode option will prevent the use of Kanji Mode internal encodation. Some readers erroneously consider a Kanji Mode section as an indication that the affected part of the message should be interpreted using a Shift-JIS character set rather than as a data compaction strategy. There's nothing that can be done other than to disable the use of Kanji Mode data compaction for",
+   "version": "The version option is used to specify the size of the symbol, 1 to 40."
+  },
+  "rationalizedCodabar": {
+   "altstartstop": "The altstartstop option specifies that the alternative set of delimiter characters is in use.",
+   "includecheck": "The includecheck option calculates the check character.",
+   "includecheckintext": "The includecheckintext option makes the calculated check character appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last character before the stop delimiter to be the check character and refuses the data if it is wrong."
+  },
+  "rectangularmicroqrcode": {
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=M - Medium (default) * eclevel=H - High",
+   "fixedeclevel": "The fixedeclevel option will prevent the error correction level from being opportunistically raised when a better fit to the selected symbol is possible.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1. Recommendation: Consider GS1 QR Code with an R version for encoding GS1 AI syntax data. * ^ECI000000 to ^ECI999999: ECI indicators * ^FNC@: FNC1 in second position, written before an AIM application indicator of one letter or two digits at the start of the data, e.g. ^FNC@T... o",
+   "suppresskanjimode": "Deprecated: The suppresskanjimode option will prevent the use of Kanji Mode internal encodation. Some readers erroneously consider a Kanji Mode section as an indication that the affected part of the message should be interpreted using a Shift-JIS character set rather than as a data compaction strategy.",
+   "version": "The version option is required and specifies the size of the symbol in RHxW format, where H is the height and W is the width in modules: * R7x43, R7x59, R7x77, R7x99, R7x139 * R9x43, R9x59, R9x77, R9x99, R9x139 * R11x27, R11x43, R11x59, R11x77, R11x99, R11x139 * R13x27, R13x43, R13x59, R13x77, R13x99, R13x139 * R15x43, R15x59, R15x77, R15x99, R15x139 * R17x43, R17x59, R17x77, R17x99, R17x139"
+  },
+  "royalmail": {
+   "includecheckintext": "The includecheckintext option makes the check character appear in the human readable text.",
+   "validatecheck": "The validatecheck option takes the last character of the data to be the check character and refuses the data if it is wrong."
+  },
+  "sscc18": {
+   "ast": "With strictspec, the ast option takes the GS1-128 application standards, such as ast=gs1.sst5 for a logistic label."
+  },
+  "swissqrcode": {
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "suppresskanjimode": "Deprecated: The suppresskanjimode option will prevent the use of Kanji Mode internal encodation. Some readers erroneously consider a Kanji Mode section as an indication that the affected part of the message should be interpreted using a Shift-JIS character set rather than as a data compaction strategy.",
+   "version": "The version option is used to specify the size of the symbol. This is not typically specified."
+  },
+  "telepen": {
+   "numeric": "Deprecated: Use Telepen Numeric instead. When the numeric option is given, the data is read as either pairs of digits or 0X, 1X, etc. The singular values ^000 to ^015 and ^127 can also be encoded using the parse option.",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters."
+  },
+  "telepennumeric": {
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters."
+  },
+  "ultracode": {
+   "eclevel": "The eclevel option is used to specify the error correction level: * eclevel=EC1 - Low * eclevel=EC2 - Medium (default) * eclevel=EC3 * eclevel=EC4 * eclevel=EC5 - Highest",
+   "parse": "When the parse option is specified, any instances of ^NNN in the data field are replaced with their equivalent ASCII value, useful for specifying unprintable characters.",
+   "parsefnc": "When the parsefnc option is specified, non-data function characters can be specified by escape sequences: * ^FNC1: FNC1 * ^FNC3: FNC3",
+   "raw": "The sampos and samtotal options make the symbol one of a Structured Append Group of 2 to 8 symbols, which a reader reassembles into a single message. Both are required: * sampos is the position of the symbol in the group, from 1 to samtotal. * samtotal is the number of symbols in the group. * The optional File Number of a Structured Append Group is not supported. * Structured Append is not availab",
+   "samtotal": "The sampos and samtotal options make the symbol one of a Structured Append Group of 2 to 8 symbols, which a reader reassembles into a single message. Both are required: * sampos is the position of the symbol in the group, from 1 to samtotal. * samtotal is the number of symbols in the group. * The optional File Number of a Structured Append Group is not supported. * Structured Append is not availab"
+  },
+  "upca": {
+   "addondescent": "The addondescent option controls how far the add-on bars extend below the baseline, in multiples of the X-dimension (defaults to the value of guarddescent).",
+   "guarddescent": "The guarddescent option controls how far the guard bars extend below the data bars, in multiples of the X-dimension (default: 5).",
+   "guardwhitespace": "The guardwhitespace option enables the display of whitespace guard marks.",
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "upcacomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  },
+  "upce": {
+   "addondescent": "The addondescent option controls how far the add-on bars extend below the baseline, in multiples of the X-dimension (defaults to the value of guarddescent).",
+   "guarddescent": "The guarddescent option controls how far the guard bars extend below the data bars, in multiples of the X-dimension (default: 5).",
+   "includetext": "The includetext option should normally be supplied."
+  },
+  "upcecomposite": {
+   "cccolumns": "The gs1-cc encoder draws the 2D component alone, and its cccolumns option sets the component's width in columns: 2 to 4 for CC-A and CC-B, and up to 30 for CC-C.",
+   "ccversion": "The ccversion option is used to select a specific 2D component, and is normally left to the default: * ccversion=a - CC-A * ccversion=b - CC-B * ccversion=c - CC-C (GS1-128 Composite only) * If ccversion is not specified a CC-A component will be selected if the data will fit, otherwise a CC-B component will be used. In the case of GS1-128 Composite a CC-C component will be used if the data does no",
+   "dontlint": "Deprecated. The dontlint option disables GS1 Application Identifier syntax validation allowing images to be generated for input that does not comply with GS1 standards."
+  }
+ }
+}

@@ -8,5 +8,7 @@ treepoem>=3.20,<4
 Pillow>=10.3,<13
 pyzbar>=0.1.9,<0.2
 pylibdmtx>=0.1.10,<0.2
+zxing-cpp>=2.3,<4        # primary decoder (QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, 1D)
+pillow-heif>=0.18,<2    # HEIC/HEIF photos from iPhones
 setuptools>=70          # pylibdmtx imports distutils, removed from Python 3.12
 reportlab>=4.1,<6

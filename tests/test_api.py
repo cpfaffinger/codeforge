@@ -93,3 +93,34 @@ def test_symbology_rules_and_categories(client):
     items = client.get("/api/v1/symbologies").json()
     assert all(i["category"] for i in items)
     assert sum(1 for i in items if i["rules"]) > 80
+
+
+def test_symbologies_etag_and_gzip(client):
+    r = client.get("/api/v1/symbologies", headers={"Accept-Encoding": "gzip"})
+    assert r.status_code == 200 and r.headers.get("etag") and r.headers.get("content-encoding") == "gzip"
+    assert client.get("/api/v1/symbologies", headers={"If-None-Match": r.headers["etag"]}).status_code == 304
+    item = r.json()[0]
+    assert "options" in item and "pattern" in item and "required_options" in item
+
+
+def test_pages_are_version_stamped_and_pwa_files_exist(client):
+    from app import __version__
+
+    html = client.get("/").text
+    assert "/static/app.js?v=" + __version__ in html and 'rel="manifest"' in html
+    assert "/static/vendor/zxing-reader.iife.js?v=" + __version__ in client.get("/scan").text
+    m = client.get("/manifest.webmanifest")
+    assert m.status_code == 200 and m.json()["start_url"].startswith("/scan")
+    sw = client.get("/sw.js")
+    assert sw.status_code == 200 and __version__ in sw.text and "javascript" in sw.headers["content-type"]
+    for icon in ("icon-192.png", "icon-512.png", "icon-192-maskable.png"):
+        assert client.get("/static/icons/" + icon).status_code == 200
+    assert client.get("/static/vendor/zxing_reader.wasm").status_code == 200
+
+
+def test_option_docs_from_wiki(client):
+    ean = client.get("/api/v1/symbologies/ean13").json()
+    opts = {o["name"]: o for o in ean["options"]}
+    assert "guard" in opts["guardwhitespace"]["description"].lower()
+    aztec = {o["name"]: o for o in client.get("/api/v1/symbologies/azteccode").json()["options"]}
+    assert aztec["layers"]["description"] and aztec["readerinit"]["description"]

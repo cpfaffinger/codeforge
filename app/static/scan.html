@@ -6,7 +6,10 @@
 <title>codeforge scanner</title>
 <meta name="description" content="Scan QR codes and barcodes live with your camera; scans are kept locally and can be regenerated with codeforge.">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=__VERSION__">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <style>
   .scan-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 460px); gap: 1.2rem; align-items: start; }
   @media (max-width: 860px) { .scan-grid { grid-template-columns: 1fr; } }
@@ -72,6 +75,7 @@
       <div class="toolbar">
         <button class="primary" id="start">Start camera</button>
         <button id="stop" hidden>Stop</button>
+        <button id="install" hidden title="add codeforge to your home screen">Install app</button>
         <select id="cameras" hidden title="camera"></select>
         <button id="torch" hidden title="flashlight">Torch</button>
         <label id="zoom-label" hidden>zoom <input type="range" id="zoom" min="1" max="1" step="0.1" value="1"></label>
@@ -79,7 +83,7 @@
       <div class="toolbar">
         <label><input type="checkbox" id="keepon"> keep the camera on after a scan</label>
         <label><input type="checkbox" id="beep" checked> beep</label>
-        <label>engine <select id="engine-select"><option value="auto">auto</option><option value="BarcodeDetector">BarcodeDetector (browser)</option><option value="ZXing">ZXing (in-browser)</option><option value="server">server (codeforge API)</option></select></label>
+        <label>engine <select id="engine-select"><option value="auto">auto</option><option value="BarcodeDetector">BarcodeDetector (browser)</option><option value="zxing-wasm">zxing-wasm (in-browser)</option><option value="ZXing">ZXing JS (in-browser, legacy)</option><option value="server">server (codeforge API)</option></select></label>
       </div>
       <div class="status"><span id="status">engine: detecting ...</span></div>
       <div class="result" id="result">
@@ -105,9 +109,10 @@
   </div>
 </main>
 
-<footer class="muted small">Live decoding uses the browser's BarcodeDetector API when it works, otherwise <a href="https://github.com/zxing-js/library">ZXing</a> (MIT) served from this site; as a last resort frames are decoded by the codeforge API.</footer>
+<footer class="muted small">Live decoding uses the browser's BarcodeDetector API when it works, otherwise <a href="https://github.com/Sec-ant/zxing-wasm">zxing-wasm</a> (MIT, zxing-cpp Apache-2.0) served from this site, then <a href="https://github.com/zxing-js/library">ZXing JS</a>; as a last resort frames are decoded by the codeforge API.</footer>
 <div id="toast" class="toast" hidden></div>
 
+<script src="/static/vendor/zxing-reader.iife.js?v=__VERSION__"></script>
 <script src="/static/vendor/zxing-library.min.js"></script>
 <script>
 (function () {
@@ -119,7 +124,7 @@
   const $ = (s) => document.querySelector(s);
   const video = $("#video"), overlay = $("#overlay"), hint = $("#hint"), flash = $("#flash"), status = $("#status"), cams = $("#cameras");
   const work = document.createElement("canvas"), wctx = work.getContext("2d", { willReadFrequently: true });
-  let engine = null, detector = null, zxingReader = null, running = false, stream = null, track = null;
+  let engine = null, detector = null, zxingReader = null, wasmReady = false, running = false, stream = null, track = null;
   let lastResultKey = null, frameNo = 0, fpsCount = 0, fpsStamp = 0, loopHandle = null, serverBusy = false, lastFrameAt = 0;
 
   // ---- format mapping (BarcodeDetector / ZXing / zbar names -> codeforge bcid) ----
@@ -131,8 +136,11 @@
     itf: "interleaved2of5", ITF: "interleaved2of5", I25: "interleaved2of5", codabar: "rationalizedCodabar", CODABAR: "rationalizedCodabar",
     data_matrix: "datamatrix", DATA_MATRIX: "datamatrix", DATAMATRIX: "datamatrix", pdf417: "pdf417", PDF_417: "pdf417", PDF417: "pdf417", aztec: "azteccode", AZTEC: "azteccode",
     RSS_14: "databaromni", DATABAR: "databaromni", RSS_EXPANDED: "databarexpanded", DATABAR_EXP: "databarexpanded", MAXICODE: "maxicode",
+    QRCode: "qrcode", MicroQRCode: "microqrcode", rMQRCode: "rectangularmicroqrcode", DataMatrix: "datamatrix", Aztec: "azteccode", PDF417: "pdf417", MaxiCode: "maxicode",
+    "EAN-13": "ean13", "EAN-8": "ean8", "UPC-A": "upca", "UPC-E": "upce", Code128: "code128", Code39: "code39", Code93: "code93", Codabar: "rationalizedCodabar",
+    DataBar: "databaromni", DataBarExpanded: "databarexpanded", DataBarLimited: "databarlimited", "ITF-14": "itf14", MicroPDF417: "micropdf417",
   };
-  function niceFormat(f) { return String(f).toUpperCase().replace(/_/g, " "); }
+  function niceFormat(f) { return String(f).replace(/([a-z])([A-Z])/g, "$1 $2").toUpperCase().replace(/_/g, " "); }
 
   // ---- storage ----
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; } }
@@ -229,11 +237,21 @@
       } catch (e) { /* fall through */ }
       if (want === "BarcodeDetector") setStatus("BarcodeDetector is not available in this browser - using ZXing", true);
     }
-    if ((want === "auto" || want === "BarcodeDetector" || want === "ZXing") && window.ZXing && window.ZXing.MultiFormatReader) {
+    if ((want === "auto" || want === "BarcodeDetector" || want === "zxing-wasm") && window.ZXingWASM && window.ZXingWASM.readBarcodes && typeof WebAssembly === "object") {
+      try {
+        if (!wasmReady) {
+          setStatus("loading the zxing-wasm decoder (1 MB) ...");
+          await ZXingWASM.prepareZXingModule({ overrides: { locateFile: (p, prefix) => (p.endsWith(".wasm") ? "/static/vendor/zxing_reader.wasm" : prefix + p) }, fireImmediately: true });
+          wasmReady = true;
+        }
+        engine = "zxing-wasm"; setStatus("engine: zxing-wasm (in-browser: QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, all 1D)"); return;
+      } catch (e) { setStatus("zxing-wasm could not be loaded (" + e.message + ") - using ZXing JS", true); }
+    }
+    if ((want === "auto" || want === "BarcodeDetector" || want === "zxing-wasm" || want === "ZXing") && window.ZXing && window.ZXing.MultiFormatReader) {
       const hints = new Map();
       hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
       zxingReader = new ZXing.MultiFormatReader(); zxingReader.setHints(hints);
-      engine = "ZXing"; setStatus("engine: ZXing (in-browser, all formats)"); return;
+      engine = "ZXing"; setStatus("engine: ZXing JS (in-browser, legacy)"); return;
     }
     engine = "server"; setStatus("engine: server - frames are sent to the codeforge API (" + (want === "server" ? "selected" : "no in-browser decoder available") + ")");
   }
@@ -277,6 +295,15 @@
     if (engine === "BarcodeDetector") {
       const codes = await detector.detect(work);
       codes.forEach((c) => c.rawValue && addScan(c.rawValue, c.format, "video", c.cornerPoints ? mapPoints(c.cornerPoints, frame) : null, "BarcodeDetector"));
+    } else if (engine === "zxing-wasm") {
+      // zxing-cpp searches rotated, inverted and downscaled copies itself and returns every code in the frame
+      const data = wctx.getImageData(0, 0, work.width, work.height);
+      const results = await ZXingWASM.readBarcodes(data, { tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, maxNumberOfSymbols: 4 });
+      results.forEach((r) => {
+        if (!r.isValid || !r.text) return;
+        const p = r.position; const pts = p ? [p.topLeft, p.topRight, p.bottomRight, p.bottomLeft] : [];
+        addScan(r.text, r.format || "UNKNOWN", "video", pts.length ? mapPoints(pts, frame) : null, "zxing-wasm");
+      });
     } else if (engine === "ZXing") {
       let src = new ZXing.HTMLCanvasElementLuminanceSource(work);
       if (frameNo % 4 === 0) src = new ZXing.InvertedLuminanceSource(src);
@@ -401,6 +428,13 @@
     xhr.ontimeout = () => { done(); msg.className = "msg err"; msg.textContent = "upload failed: timeout"; };
     xhr.send(fd);
   });
+
+  // ---- PWA: installable, assets cached by the service worker ----
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
+  let installEvent = null;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; $("#install").hidden = false; });
+  $("#install").addEventListener("click", async () => { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; $("#install").hidden = true; });
+  window.addEventListener("appinstalled", () => { $("#install").hidden = true; toast("installed"); });
 
   // ---- init ----
   $("#keepon").checked = pref(KEEP_KEY, "0") === "1";

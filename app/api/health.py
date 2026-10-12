@@ -8,7 +8,7 @@ from app import __version__
 from app.config import settings
 from app.engines.barcode import cache_stats, ghostscript_available, symbologies
 from app.engines.bwipp_rules import bwipp_version
-from app.engines.decoder import dmtx_available, zbar_available
+from app.engines.decoder import decode_stats, dmtx_available, zbar_available, zxing_available
 from app.models import Health
 
 router = APIRouter(tags=["meta"])
@@ -23,6 +23,7 @@ def healthz():
         ghostscript=gs,
         bwipp=bwipp_version(),
         zbar=zbar_available(),
+        zxingcpp=zxing_available(),
         libdmtx=dmtx_available(),
         symbologies=len(symbologies()),
         rate_limit=settings.rate_limit,
@@ -34,7 +35,7 @@ def stats():
     from app.engines import gsworker
 
     pool = gsworker._pool
-    return {"cache": cache_stats(), "ghostscript_pool": pool.stats() if pool else None, "gs_workers": settings.gs_workers}
+    return {"cache": cache_stats(), "ghostscript_pool": pool.stats() if pool else None, "gs_workers": settings.gs_workers, "decoder": decode_stats()}
 
 
 @router.get("/version", summary="Version string")

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
     app.add_middleware(RateLimitMiddleware, spec=settings.rate_limit, trust_proxy=settings.trust_proxy)
+    app.add_middleware(GZipMiddleware, minimum_size=1024)  # the symbology list with options is ~500 kB uncompressed
 
     @app.exception_handler(RenderError)
     async def render_error(_request: Request, exc: RenderError):
@@ -76,6 +78,20 @@ def create_app() -> FastAPI:
         from fastapi.responses import FileResponse
 
         return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest():
+        from fastapi.responses import FileResponse
+
+        return FileResponse(STATIC_DIR / "manifest.webmanifest", media_type="application/manifest+json")
+
+    @app.get("/sw.js", include_in_schema=False)
+    def service_worker():
+        """Served from the root so the service worker may control /scan and /."""
+        from fastapi.responses import Response
+
+        body = (STATIC_DIR / "sw.js").read_text(encoding="utf-8").replace("__VERSION__", __version__)
+        return Response(body, media_type="application/javascript", headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
 
     return app
 

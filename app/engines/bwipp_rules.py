@@ -24,9 +24,13 @@ from __future__ import annotations
 
 import base64
 import functools
+import json
 import re
 import struct
+from pathlib import Path
 from typing import Any
+
+_DOCS_FILE = Path(__file__).resolve().parent.parent / "data" / "option_docs.json"
 
 _BLOCK_RE = re.compile(
     r"%%BeginResource: uk\.co\.terryburton\.bwipp (\S+) [^\n]*\n%%BeginData:[^\n]*\n"
@@ -199,6 +203,26 @@ _CHARSET_PHRASES: list[tuple[str, str]] = [
     ("dashes", "\\-"),
     ("dash", "\\-"),
 ]
+
+
+@functools.lru_cache(maxsize=1)
+def wiki_docs() -> dict[str, Any]:
+    """Option descriptions extracted from the BWIPP wiki (tools/extract_option_docs.py)."""
+    try:
+        return json.loads(_DOCS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {"options": {}, "encoders": {}}
+
+
+def option_description(encoder: str, name: str) -> str:
+    """Encoder-specific wiki note > curated short description > generic wiki description."""
+    docs = wiki_docs()
+    specific = docs.get("encoders", {}).get(encoder, {}).get(name)
+    if specific:
+        return specific
+    if name in OPTION_DOCS:
+        return OPTION_DOCS[name][1]
+    return docs.get("options", {}).get(name, "")
 
 
 def _category_index() -> dict[str, str]:
@@ -426,7 +450,8 @@ def options_of(encoder: str) -> list[dict[str, Any]]:
     for name, default in merged.items():
         if name in _INTERNAL:
             continue
-        group, doc = OPTION_DOCS.get(name, ("encoder" if name in own else "advanced", ""))
+        group = OPTION_DOCS.get(name, ("encoder" if name in own else "advanced", ""))[0]
+        doc = option_description(encoder, name)
         if name in own and group in ("encoder", "advanced"):
             group = "encoder"
         typ = _option_type(name, default)
@@ -542,6 +567,12 @@ def summarize(rules: list[dict[str, str]], description: str = "") -> dict[str, A
     min_len = max_len = None
     if len(length_hits) == 1:
         min_len, max_len = length_hits[0]
+    elif len(length_hits) > 1:
+        # several rules about the whole data: keep the widest range so valid input is never blocked
+        lows = [lo for lo, _ in length_hits if lo is not None]
+        highs = [hi for _, hi in length_hits if hi is not None]
+        min_len = min(lows) if lows and len(lows) == len(length_hits) else None
+        max_len = max(highs) if highs and len(highs) == len(length_hits) else None
     return {"charset": charset, "min_length": min_len, "max_length": max_len, "pattern": pattern_from_rules(rules)}
 
 

@@ -141,12 +141,19 @@ def barcode_post(params: BarcodeParams, output: str = Query("image", description
 
 
 @router.get("/symbologies", tags=["barcode"], summary="List all supported symbologies", response_model=list[Symbology])
-def symbologies(q: str | None = Query(None, description="filter by id or description")):
+def symbologies(request: Request, q: str | None = Query(None, description="filter by id or description")):
     items = list(barcode_engine.symbologies().values())
     if q:
         needle = q.lower()
         items = [s for s in items if needle in s["id"] or needle in s["description"].lower()]
-    return items
+    # the list only changes with a new release / BWIPP version: let browsers revalidate cheaply
+    from app import __version__
+    from app.engines.bwipp_rules import bwipp_version
+
+    etag = '"%s-%s-%s"' % (__version__, bwipp_version(), q or "")
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    return JSONResponse(items, headers={"ETag": etag, "Cache-Control": "public, max-age=3600"})
 
 
 @router.get("/symbologies/{bcid}", tags=["barcode"], summary="One symbology", response_model=Symbology)

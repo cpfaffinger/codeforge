@@ -18,13 +18,13 @@ container and retire the originals.
 |---|---|
 | **QR codes** | [segno](https://github.com/heuer/segno): versions 1-40 and Micro QR, error levels L/M/Q/H, colours, PNG, SVG, JPEG, WEBP, GIF, BMP, PDF |
 | **Barcodes** | [BWIPP](https://github.com/bwipp/postscriptbarcode) via [treepoem](https://github.com/adamchainz/treepoem) + Ghostscript: EAN/UPC/ISBN, Code 128/39/93, GS1-128, GS1 DataBar, ITF-14, Codabar, MSI, Pharmacode, DataMatrix, PDF417, Aztec, MaxiCode, Australia Post, Royal Mail, USPS, Deutsche Post, Japan Post, Swiss QR, ... - the same engine as bwip-js, so every `bcid` and encoder option is identical |
-| **Decoder** | zbar (QR, EAN, UPC, Code 128/39/93, ITF, Codabar, DataBar, PDF417) and libdmtx (DataMatrix) from uploaded, raw-body or base64 images; a pre-processing ladder (downscaling, illumination flattening, contrast, inversion, rotation) makes phone photos decode reliably |
+| **Decoder** | zxing-cpp (QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar) with zbar and libdmtx as fallbacks, from uploaded, raw-body or base64 images including HEIC; a pre-processing ladder (downscaling, illumination flattening, contrast, inversion, rotation) makes phone photos decode reliably |
 | **Batch** | many codes per request as JSON (base64), ZIP, or a PDF label sheet with configurable grid and captions |
 | **Playground** | `/` - live preview, every symbology selectable from a grouped/filterable list with its data format rules and **every encoder/renderer option as form fields** (required ones first, all extracted from BWIPP itself), live validation of the data against the rules, examples, decoder with drag & drop / paste / upload progress, batch builder, copy API and legacy URLs |
 | **Showcase** | `/showcase` - every symbology rendered with its example; click a card to open it prefilled in the playground |
-| **Scanner** | `/scan` - live camera scanning in the browser: frames are decoded with the BarcodeDetector API (self-tested), ZXing or the codeforge API as a last resort; no duplicate scans while the code stays in view, camera stops after a scan unless "keep the camera on" is ticked, torch/zoom, photo upload decoded on the server; recent scans are kept in localStorage with a one-click "generate with codeforge" link |
+| **Scanner** | `/scan` - live camera scanning in the browser: frames are decoded with the BarcodeDetector API (self-tested), zxing-wasm (zxing-cpp compiled to WebAssembly, served locally), ZXing JS or the codeforge API as a last resort; no duplicate scans while the code stays in view, camera stops after a scan unless "keep the camera on" is ticked, torch/zoom, photo upload decoded on the server; installable as a home-screen app (manifest + service worker); recent scans are kept in localStorage with a one-click "generate with codeforge" link |
 | **API docs** | Swagger UI at `/docs`, ReDoc at `/redoc`, schema at `/openapi.json` |
-| **Ops** | one container, non-root, healthcheck, per-IP rate limit, size limits, `/healthz`, 12-factor config via env vars |
+| **Ops** | one container, non-root, healthcheck, per-IP rate limit, size limits, gzip, ETags and version-stamped assets, `/healthz`, `/stats`, 12-factor config via env vars |
 
 ## Quick start
 
@@ -87,8 +87,9 @@ POST /api/v1/decode/base64   {"image": "data:image/png;base64,...."}
 
 Photos go through a ladder of pre-processing passes (downscaled copies, illumination flattening, autocontrast,
 sharpening, inverted, rotated) until a pass finds something or `CODEFORGE_DECODE_BUDGET` seconds are used up;
-`found_by` names the pass. With `count: 0` the `hints` explain what to try. `try_harder=false` runs a single
-plain pass (used by the live scanner's server fallback). Input: PNG, JPEG, GIF, BMP, WEBP, TIFF - not HEIC.
+`found_by` names the engine and pass (`zxing/plain`, `zbar/scale1600/inverted` ...). With `count: 0` the `hints` explain what to try.
+`try_harder=false` runs a single plain pass (used by the live scanner's server fallback). Input: PNG, JPEG, GIF, BMP, WEBP,
+TIFF and HEIC/HEIF. zxing-cpp results also carry `format` (e.g. `Micro QR Code`), `ec_level` and the ISO 15424 `symbology_identifier`.
 
 ### Batch and PDF label sheets
 
@@ -142,7 +143,7 @@ All settings are environment variables with the prefix `CODEFORGE_` (or a `.env`
 | Variable | Default | Purpose |
 |---|---|---|
 | `CODEFORGE_WORKERS` | `2` | uvicorn worker processes |
-| `CODEFORGE_RATE_LIMIT` | `300/minute` | per client IP; `0` disables |
+| `CODEFORGE_RATE_LIMIT` | `300/minute` | per client IP and uvicorn worker process (in-memory counter, effective limit = value x workers); `0` disables |
 | `CODEFORGE_TRUST_PROXY` | `true` | use `X-Forwarded-For` behind a reverse proxy |
 | `CODEFORGE_MAX_DATA_LENGTH` | `4000` | maximum encoded text length |
 | `CODEFORGE_MAX_SCALE` / `MAX_BORDER` | `30` / `50` | limits for scale, padding, border |
@@ -184,9 +185,10 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-Barcode rendering needs Ghostscript (`apt install ghostscript` / `brew install ghostscript`) and the
-decoder needs `libzbar0`; tests that depend on them are skipped when they are missing. The full test
-suite runs inside the image: `docker build --target test .`
+Barcode rendering needs Ghostscript (`apt install ghostscript` / `brew install ghostscript`); the decoder works with
+the zxing-cpp wheel alone, `libzbar0` adds the zbar fallback. Tests that depend on missing libraries are skipped. The full
+test suite runs inside the image: `docker build --target test .`. Browser tests: `pip install pytest-playwright &&
+python -m playwright install chromium && pytest tests/e2e` (they start their own dev server, or use `CODEFORGE_E2E_URL`).
 
 ## Project layout
 
@@ -198,16 +200,19 @@ app/api/v1.py          /api/v1/* JSON API
 app/api/health.py      /healthz, /version
 app/engines/qr.py      segno
 app/engines/barcode.py treepoem/BWIPP + Pillow renderer options
-app/engines/decoder.py zbar / libdmtx with the pre-processing ladder
+app/engines/decoder.py zxing-cpp, zbar ladder, libdmtx; HEIC via pillow-heif
 app/engines/bwipp_rules.py rules, examples and options of every encoder, extracted from the vendored barcode.ps
 app/engines/render.py  formats, colours, PDF label sheets
 app/static/            playground, showcase, scanner (plain HTML/CSS/JS), vendored ZXing
 app/data/symbologies.json  descriptions and examples per symbology (from bwip-js, MIT)
+app/data/option_docs.json  option descriptions extracted from the BWIPP wiki (tools/extract_option_docs.py)
+app/static/vendor/     zxing-wasm (MIT, zxing-cpp Apache-2.0) and ZXing JS (Apache-2.0)
+tests/e2e/             Playwright browser tests (optional, skipped without playwright)
 tests/                 pytest
 deploy/                nginx example
 ```
 
 ## License
 
-MIT. Symbology descriptions are derived from bwip-js (MIT); BWIPP is MIT; Ghostscript is AGPL and
-used as an external process only.
+MIT. Symbology descriptions are derived from bwip-js (MIT) and the BWIPP wiki; BWIPP is MIT; Ghostscript is AGPL and
+used as an external process only; zxing-cpp and ZXing JS are Apache-2.0, zxing-wasm is MIT.

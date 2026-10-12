@@ -93,7 +93,10 @@ class DecodedSymbol(BaseModel):
     quality: int | None = None
     rect: dict[str, int] = Field(default_factory=dict, description="Bounding box in pixels of the (EXIF-rotated) source image.")
     polygon: list[dict[str, int]] = Field(default_factory=list)
-    engine: str | None = Field(None, description="zbar or libdmtx")
+    engine: str | None = Field(None, description="zxingcpp, zbar or libdmtx")
+    format: str | None = Field(None, description="Precise format name from zxing-cpp (e.g. 'Micro QR Code', 'DataBar Expanded').")
+    ec_level: str | None = None
+    symbology_identifier: str | None = Field(None, description="ISO/IEC 15424 symbology identifier, e.g. ]Q1")
     found_by: str | None = Field(None, description="Pre-processing pass that found the symbol, e.g. 'scale1600/plain' or 'orig/inverted'.")
 
 
@@ -144,6 +147,7 @@ class Health(BaseModel):
     ghostscript: bool
     bwipp: str = Field("", description="Version of the vendored BWIPP library.")
     zbar: bool
+    zxingcpp: bool = False
     libdmtx: bool
     symbologies: int
     rate_limit: str

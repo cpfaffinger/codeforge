@@ -13,8 +13,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
+from app import __version__
 from app.config import settings
 from app.engines.barcode import is_image_format, make_barcode
 from app.engines.qr import make_qr
@@ -23,6 +24,12 @@ from app.engines.render import RenderError
 router = APIRouter(tags=["legacy"])
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+
+def _page(name: str) -> HTMLResponse:
+    """Static HTML with ``__VERSION__`` replaced, so app.js/style.css URLs change with every release (cache busting)."""
+    html = (STATIC_DIR / name).read_text(encoding="utf-8").replace("__VERSION__", __version__)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 def _no_cache_image(rendered) -> Response:
@@ -59,12 +66,12 @@ def legacy_live():
 
 @router.get("/showcase", include_in_schema=False, summary="Gallery of every supported symbology")
 def showcase():
-    return FileResponse(STATIC_DIR / "showcase.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+    return _page("showcase.html")
 
 
 @router.get("/scan", include_in_schema=False, summary="Live camera scanner")
 def scan():
-    return FileResponse(STATIC_DIR / "scan.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+    return _page("scan.html")
 
 
 @router.get(
@@ -84,7 +91,7 @@ def root(request: Request):
         return legacy_barcode(params)
     if not settings.enable_playground:
         return RedirectResponse("/docs", status_code=302)
-    return FileResponse(STATIC_DIR / "index.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+    return _page("index.html")
 
 
 def legacy_barcode(params: dict[str, str]) -> Response:

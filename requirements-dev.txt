@@ -1,2 +1,3 @@
 pytest>=8
 httpx>=0.27
+# browser tests (tests/e2e), optional: pip install pytest-playwright && python -m playwright install chromium
