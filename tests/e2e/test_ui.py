@@ -134,7 +134,7 @@ def test_barcode_options_panel_and_validation(page, base_url):
 def test_decode_upload_shows_result_and_overlay(page, base_url):
     page.goto(base_url + "/?tab=decode")
     page.wait_for_selector("#dropzone")
-    png = urllib.request.urlopen(base_url + "/api/v1/qr?data=https://example.com/e2e-decode&scale=5").read()
+    png = page.request.get(base_url + "/api/v1/qr?data=https://example.com/e2e-decode&scale=5").body()  # through the browser (works behind Cloudflare too)
     page.set_input_files("#form-decode [name=file]", {"name": "qr.png", "mimeType": "image/png", "buffer": png})
     page.wait_for_function("document.getElementById('decode-results').textContent.includes('found')", timeout=15000)
     results = page.text_content("#decode-results")
