@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import re
 import shutil
 import threading
 from collections import OrderedDict
@@ -70,13 +71,23 @@ def symbologies() -> dict[str, dict[str, Any]]:
     except ImportError:  # treepoem missing (e.g. local dev without ghostscript)
         for code, d in described.items():
             result[code] = {"id": code, **d}
-    all_rules = bwipp_rules.rules_by_encoder()
+    headers = bwipp_rules.headers()
     for code, item in result.items():
-        rules = all_rules.get(code, [])
+        hdr = headers.get(code, {})
+        # BWIPP's own example when the vendored description table has none (new encoders such as d3aqr)
+        if not item.get("example") and hdr.get("EXAM"):
+            item["example"] = hdr["EXAM"]
+            item["example_options"] = hdr.get("EXOP", "")
+        rules = bwipp_rules.rules_for(code)
         item["rules"] = [r["message"] for r in rules]
         item.update(bwipp_rules.summarize(rules, item["description"]))
+        if item.get("pattern") and item.get("example") and not re.match(item["pattern"], item["example"].replace(chr(10), "")):
+            item["pattern"] = None  # the encoder normalises its input first (itf14 accepts spaces); don't block valid data
         item["category"] = bwipp_rules.category_of(code)
         item["wiki"] = bwipp_rules.wiki_url(item["description"])
+        item["renderer"] = {"renlinear": "linear", "renmatrix": "matrix", "renmaximatrix": "maxicode"}.get(hdr.get("RNDR", ""), "linear")
+        item["options"] = bwipp_rules.options_of(code)
+        item["required_options"] = [o["name"] for o in item["options"] if o["required"]]
     return dict(sorted(result.items(), key=lambda kv: (kv[1]["category"], kv[1]["description"].lower())))
 
 

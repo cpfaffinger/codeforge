@@ -88,20 +88,37 @@ class BatchResponse(BaseModel):
 
 
 class DecodedSymbol(BaseModel):
-    type: str
+    type: str = Field(..., description="zbar/libdmtx symbol type: QRCODE, EAN13, CODE128, DATAMATRIX ...")
     data: str
     quality: int | None = None
-    rect: dict[str, int]
-    polygon: list[dict[str, int]]
+    rect: dict[str, int] = Field(default_factory=dict, description="Bounding box in pixels of the (EXIF-rotated) source image.")
+    polygon: list[dict[str, int]] = Field(default_factory=list)
+    engine: str | None = Field(None, description="zbar or libdmtx")
+    found_by: str | None = Field(None, description="Pre-processing pass that found the symbol, e.g. 'scale1600/plain' or 'orig/inverted'.")
 
 
 class DecodeResponse(BaseModel):
     count: int
     symbols: list[DecodedSymbol]
+    width: int | None = Field(None, description="Width of the decoded image in pixels (after EXIF rotation).")
+    height: int | None = None
+    elapsed_ms: int | None = Field(None, description="Server-side decoding time.")
+    passes: int | None = Field(None, description="Number of pre-processing passes that were tried.")
+    hints: list[str] = Field(default_factory=list, description="Why nothing was found and what to try, when count is 0.")
 
 
 class DecodeBase64Request(BaseModel):
-    image: str = Field(..., description="Base64 encoded image, optionally as data URI.")
+    image: str = Field(..., description="Base64 encoded image, optionally as data URI.", examples=["data:image/png;base64,iVBORw0KGgo..."])
+
+
+class SymbologyOption(BaseModel):
+    name: str = Field(..., description="BWIPP option name as used in the query string / options dict.")
+    type: str = Field("string", description="bool | int | float | string | color | enum")
+    default: Any = Field(None, description="BWIPP default, null when unset.")
+    required: bool = Field(False, description="The encoder refuses to render without this option (e.g. d3aqr category).")
+    choices: list[str] | None = Field(None, description="Allowed values for enum options.")
+    description: str = ""
+    group: str = Field("encoder", description="required | encoder | text | appearance | advanced")
 
 
 class Symbology(BaseModel):
@@ -114,13 +131,18 @@ class Symbology(BaseModel):
     charset: str | None = Field(None, description="digits | alphanumeric | restricted | null (no restriction detected)")
     min_length: int | None = None
     max_length: int | None = None
+    pattern: str | None = Field(None, description="Regular expression for the allowed characters, derived from the BWIPP rules (null = no restriction detected).")
     wiki: str = Field("", description="BWIPP wiki page with the full option reference.")
+    renderer: str = Field("linear", description="linear | matrix | maxicode")
+    options: list[SymbologyOption] = Field(default_factory=list, description="Every encoder and renderer option this symbology accepts, extracted from BWIPP.")
+    required_options: list[str] = Field(default_factory=list)
 
 
 class Health(BaseModel):
     status: str
     version: str
     ghostscript: bool
+    bwipp: str = Field("", description="Version of the vendored BWIPP library.")
     zbar: bool
     libdmtx: bool
     symbologies: int

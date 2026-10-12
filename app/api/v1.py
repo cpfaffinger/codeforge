@@ -7,13 +7,15 @@ import io
 import zipfile
 from typing import Any
 
-from fastapi import APIRouter, Body, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Body, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, Response
+from starlette.datastructures import UploadFile
 
 from app.config import settings
 from app.engines import barcode as barcode_engine
 from app.engines import qr as qr_engine
-from app.engines.decoder import decode_image, dmtx_available, zbar_available
+from app.engines.decoder import decode_image_full, dmtx_available, zbar_available
 from app.engines.render import ALL_FORMATS, RenderError, Rendered, label_sheet
 from app.models import (
     BarcodeParams,
@@ -160,28 +162,88 @@ def formats():
     return {"qr": ALL_FORMATS, "barcode": [f for f in ALL_FORMATS if f != "svg"]}
 
 
+@router.get("/limits", tags=["meta"], summary="Server limits (upload size, data length, scale, batch items)")
+def limits():
+    return {
+        "max_upload_bytes": settings.max_upload_bytes,
+        "max_data_length": settings.max_data_length,
+        "max_scale": settings.max_scale,
+        "max_border": settings.max_border,
+        "max_image_pixels": settings.max_image_pixels,
+        "max_batch_items": settings.max_batch_items,
+        "decode_budget_seconds": settings.decode_budget,
+        "rate_limit": settings.rate_limit,
+    }
+
+
 # ----------------------------------------------------------------------- decode
-@router.post("/decode", tags=["decode"], summary="Decode QR codes / barcodes from an uploaded image", response_model=DecodeResponse)
-async def decode_upload(file: UploadFile = File(..., description="PNG, JPEG, GIF, BMP or WEBP"), try_harder: bool = Query(True)):
-    _require_decoder()
-    content = await file.read()
+DECODE_DESCRIPTION = """Reads every QR code / barcode in an image and returns the decoded text, symbol type and position.
+
+Three ways to send the image:
+
+* **multipart/form-data** with a field named `file` (HTML forms, `curl -F file=@photo.jpg`)
+* the **raw image as the request body** with its `Content-Type` (`curl --data-binary @photo.jpg -H 'Content-Type: image/jpeg'`)
+* **base64** JSON via `POST /api/v1/decode/base64`
+
+Photos are pre-processed in several passes (downscaling, contrast, illumination flattening, inversion)
+until something is found or the time budget runs out; `found_by` tells which pass succeeded. Supported
+input formats: PNG, JPEG, GIF, BMP, WEBP, TIFF (not HEIC/HEIF). Readable symbologies: QR Code, EAN/UPC,
+Code 128/39/93, ITF, Codabar, GS1 DataBar, PDF417 and DataMatrix.
+"""
+
+
+def _decode_response(content: bytes, try_harder: bool) -> dict[str, Any]:
     try:
-        symbols = decode_image(content, try_harder=try_harder)
+        return decode_image_full(content, try_harder=try_harder).as_dict()
     except RenderError as exc:
         raise _bad(exc)
-    return {"count": len(symbols), "symbols": symbols}
 
 
-@router.post("/decode/base64", tags=["decode"], summary="Decode from a base64 encoded image", response_model=DecodeResponse)
+@router.post(
+    "/decode",
+    tags=["decode"],
+    summary="Decode QR codes / barcodes from an uploaded image",
+    description=DECODE_DESCRIPTION,
+    response_model=DecodeResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "multipart/form-data": {"schema": {"type": "object", "properties": {"file": {"type": "string", "format": "binary"}}, "required": ["file"]}},
+                "image/jpeg": {"schema": {"type": "string", "format": "binary"}},
+                "image/png": {"schema": {"type": "string", "format": "binary"}},
+                "application/octet-stream": {"schema": {"type": "string", "format": "binary"}},
+            },
+            "required": True,
+        }
+    },
+)
+async def decode_upload(request: Request, try_harder: bool = Query(True, description="run the pre-processing ladder (slower, finds more); false = one plain pass")):
+    _require_decoder()
+    content_type = request.headers.get("content-type", "")
+    length = request.headers.get("content-length")
+    if length and length.isdigit() and int(length) > settings.max_upload_bytes + 4096:
+        raise HTTPException(status_code=413, detail=f"upload is larger than {settings.max_upload_bytes // (1024 * 1024)} MB (CODEFORGE_MAX_UPLOAD_BYTES)")
+    if content_type.startswith(("multipart/form-data", "application/x-www-form-urlencoded")):
+        form = await request.form()
+        upload = form.get("file") or form.get("image") or next((v for v in form.values() if isinstance(v, UploadFile)), None)
+        if not isinstance(upload, UploadFile):
+            raise HTTPException(status_code=400, detail="multipart form needs a file field named 'file'")
+        content = await upload.read()
+    else:
+        content = await request.body()
+    # decoding is CPU bound: run it in the threadpool so the event loop keeps serving other requests
+    return await run_in_threadpool(_decode_response, content, try_harder)
+
+
+@router.post("/decode/base64", tags=["decode"], summary="Decode from a base64 encoded image", description="Same as `/decode`, image as base64 string or data URI in JSON.", response_model=DecodeResponse)
 def decode_b64(body: DecodeBase64Request, try_harder: bool = Query(True)):
     _require_decoder()
     payload = body.image.split(",", 1)[1] if body.image.startswith("data:") and "," in body.image else body.image
     try:
         content = base64.b64decode(payload, validate=False)
-        symbols = decode_image(content, try_harder=try_harder)
-    except (RenderError, ValueError) as exc:
-        raise _bad(exc)
-    return {"count": len(symbols), "symbols": symbols}
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="image is not valid base64")
+    return _decode_response(content, try_harder)
 
 
 def _require_decoder() -> None:

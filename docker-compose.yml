@@ -15,7 +15,7 @@ services:
         required: false
     environment:
       CODEFORGE_WORKERS: "2"
-      CODEFORGE_RATE_LIMIT: "120/minute"
+      CODEFORGE_RATE_LIMIT: "300/minute"
       CODEFORGE_TRUST_PROXY: "true"
     mem_limit: 1g
     tmpfs:

@@ -18,14 +18,15 @@ class Settings(BaseSettings):
     cors_origins: str = Field("*", description="Comma separated list of allowed CORS origins, empty to disable CORS headers.")
 
     # abuse protection
-    rate_limit: str = Field("120/minute", description="Requests per client IP, e.g. 120/minute, 2000/hour, 0 = disabled.")
+    rate_limit: str = Field("300/minute", description="Requests per client IP, e.g. 300/minute, 2000/hour, 0 = disabled. The showcase alone loads ~110 images.")
     trust_proxy: bool = Field(True, description="Use X-Forwarded-For / X-Real-IP to identify the client (behind nginx).")
     max_data_length: int = Field(4000, description="Maximum length of the encoded text.")
     max_scale: int = Field(30, description="Maximum scale / box size.")
     max_border: int = Field(50, description="Maximum border / padding in modules or pixels.")
     max_image_pixels: int = Field(30_000_000, description="Maximum pixels of a generated or uploaded image.")
     max_batch_items: int = Field(200, description="Maximum items in one batch request.")
-    max_upload_bytes: int = Field(10 * 1024 * 1024, description="Maximum upload size for the decoder.")
+    max_upload_bytes: int = Field(16 * 1024 * 1024, description="Maximum upload size for the decoder (phone photos are 3-12 MB).")
+    decode_budget: float = Field(8.0, description="Seconds the decoder may spend on pre-processing passes of one image.")
 
     # barcode engine
     gs_workers: int = Field(2, description="Persistent Ghostscript processes per uvicorn worker (0 = start gs per image via treepoem, slow).")

@@ -63,6 +63,7 @@
           <button type="submit" class="primary">Render</button>
           <button type="button" data-download="qr">Download</button>
           <button type="button" data-copyb64="qr">Copy base64</button>
+          <a class="button-link" href="/scan">Scan with the camera</a>
         </div>
         <div class="urls">
           <label>API URL <input id="url-qr" readonly><button type="button" data-copy="url-qr" class="mini">copy</button></label>
@@ -86,13 +87,34 @@
         <div id="sym-info" class="sym-info" hidden>
           <div class="sym-head"><strong id="sym-title"></strong> <span id="sym-cat" class="muted small"></span> <a id="sym-wiki" class="small" target="_blank" rel="noopener">BWIPP reference</a></div>
           <div id="sym-summary" class="sym-summary"></div>
-          <div class="small muted">Data format rules (as enforced by the encoder):</div>
-          <ul id="sym-rules" class="sym-rules"></ul>
+          <details class="sym-rules-box"><summary class="small muted">Data format rules (as enforced by the encoder) <span id="sym-rules-count"></span></summary>
+            <ul id="sym-rules" class="sym-rules"></ul>
+          </details>
           <div id="sym-example" class="small"></div>
         </div>
-        <label>Text <textarea name="text" rows="2" required></textarea></label>
-        <label>Encoder options <span class="muted small">(BWIPP, one per line or space separated: <code>includetext</code>, <code>textsize=12</code>, <code>eclevel=H</code>)</span>
-          <textarea name="options" rows="2"></textarea>
+        <label>Text
+          <textarea name="text" rows="2" required spellcheck="false"></textarea>
+          <div id="text-check" class="check-msg" hidden></div>
+        </label>
+
+        <div id="sym-options" class="sym-options" hidden>
+          <div class="sym-options-head">
+            <strong>Options</strong>
+            <span class="muted small" id="sym-options-info"></span>
+            <button type="button" class="mini" id="opt-reset">reset to defaults</button>
+          </div>
+          <div id="opt-required" class="opt-required" hidden>
+            <div class="small"><strong>Required</strong> <span class="muted">- the encoder refuses to render without these</span></div>
+            <div class="opt-list" id="opt-required-list"></div>
+          </div>
+          <details class="opt-group" id="opt-encoder"><summary>Encoder options <span class="muted small" data-count></span></summary><div class="opt-list"></div></details>
+          <details class="opt-group" id="opt-text"><summary>Human readable text <span class="muted small" data-count></span></summary><div class="opt-list"></div></details>
+          <details class="opt-group" id="opt-appearance"><summary>Appearance (size, colours, border, quiet zone) <span class="muted small" data-count></span></summary><div class="opt-list"></div></details>
+          <details class="opt-group" id="opt-advanced"><summary>Advanced <span class="muted small" data-count></span></summary><div class="opt-list"></div></details>
+        </div>
+
+        <label>Extra options <span class="muted small">(raw BWIPP syntax, overrides the fields above: <code>includetext textsize=12 eclevel=H</code>)</span>
+          <textarea name="options" rows="1" spellcheck="false"></textarea>
         </label>
         <div class="row">
           <label>Scale <input name="scale" type="number" min="1" max="30" value="2"></label>
@@ -125,15 +147,26 @@
   <section id="panel-decode" class="panel">
     <div class="grid">
       <form class="controls" id="form-decode">
-        <div id="dropzone" class="dropzone" tabindex="0">
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="choose an image to decode">
           <strong>Drop an image here</strong>, paste from the clipboard, or
           <label class="link">choose a file <input type="file" name="file" accept="image/*" hidden></label>
-          <div class="muted small">PNG, JPEG, GIF, BMP, WEBP - QR codes and 1D barcodes (EAN, UPC, Code 128, Code 39, ITF ...)</div>
+          <div class="muted small">PNG, JPEG, GIF, BMP, WEBP, TIFF up to <span id="decode-limit">16 MB</span> - not HEIC (iPhone: share as JPEG)</div>
+          <div class="muted small">QR Code, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar, PDF417, DataMatrix</div>
+        </div>
+        <div id="decode-progress" class="progress" hidden>
+          <div class="bar"><div class="fill"></div></div>
+          <div class="label"><span class="spinner"></span> <span id="decode-progress-text"></span></div>
         </div>
         <div class="actions">
           <button type="button" id="decode-sample">Decode the current QR preview</button>
+          <a class="button-link" href="/scan">Live camera scanner</a>
         </div>
         <div id="decode-results"></div>
+        <details class="small muted"><summary>Use the API</summary>
+          <pre class="info">curl -F file=@photo.jpg <span id="decode-api-url"></span>
+curl --data-binary @photo.jpg -H "Content-Type: image/jpeg" <span class="decode-api-url2"></span>
+curl -X POST <span class="decode-api-url3"></span> -H "Content-Type: application/json" -d '{"image": "data:image/png;base64,..."}'</pre>
+        </details>
       </form>
       <div class="preview" id="preview-decode"><div class="placeholder">Decoded image appears here</div></div>
     </div>
@@ -167,7 +200,8 @@
           </div>
         </fieldset>
         <div class="actions">
-          <button type="submit" class="primary">Generate</button>
+          <button type="submit" class="primary" id="batch-submit">Generate</button>
+          <span class="muted small" id="batch-count"></span>
         </div>
         <pre id="batch-request" class="info muted"></pre>
       </form>

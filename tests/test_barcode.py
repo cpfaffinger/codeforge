@@ -3,6 +3,8 @@ import io
 import pytest
 from PIL import Image
 
+import re
+
 from app.engines.barcode import normalize_options, parse_option_string, symbologies
 from app.engines.render import RenderError, color_to_bwipp
 from tests.conftest import needs_gs
@@ -153,3 +155,49 @@ def test_aztec_format_full_and_codabar(client):
     assert r.status_code == 200 and r.headers["content-type"] == "image/png"
     r = client.get("/api/v1/barcode", params={"bcid": "rationalizedCodabar", "text": "A0123456789B", "includetext": ""})
     assert r.status_code == 200
+
+
+def test_symbology_options_from_bwipp():
+    s = symbologies()
+    d3 = s["d3aqr"]
+    names = {o["name"]: o for o in d3["options"]}
+    assert names["category"]["required"] and d3["required_options"] == ["category"]
+    assert names["hostratio"]["choices"] == ["2", "2.5", "3"]
+    assert names["eclevel"]["choices"] == ["L", "M", "Q", "H"]  # inherited from qrcode
+    assert d3["example"].startswith("HTTPS://ID.GS1.ORG") and "category=2842" in d3["example_options"]
+    c128 = {o["name"]: o for o in s["code128"]["options"]}
+    assert c128["includetext"]["type"] == "bool" and c128["textsize"]["group"] == "text" and c128["parse"]["group"] == "encoder"
+    assert all(o["description"] for o in s["ean13"]["options"] if o["group"] in ("text", "appearance"))
+    assert s["mailmark"]["example_options"] == "type=29" and {o["name"] for o in s["mailmark"]["options"]} >= {"type"}
+    assert s["swissqrcode"]["example"].startswith("SPC" + chr(10) + "0200")
+
+
+def test_symbology_patterns():
+    s = symbologies()
+    assert s["ean13"]["pattern"] == "^[0-9]*$"
+    hibc = s["hibcdatamatrixrectangular"]
+    assert re.match(hibc["pattern"], hibc["example"]) and not re.match(hibc["pattern"], "abc")
+    assert re.match(s["gs1-128"]["pattern"], "(01)09521234543213(3103)000123") and not re.match(s["gs1-128"]["pattern"], "0109521234543213")
+    assert s["daft"]["pattern"] == "^[DAFT]*$"
+    for item in s.values():
+        if item["pattern"] and item["example"]:
+            assert re.match(item["pattern"], item["example"].replace(chr(10), "")), (item["id"], item["pattern"], item["example"])
+        if item["pattern"]:
+            re.compile(item["pattern"])
+
+
+@needs_gs
+def test_every_showcase_example_renders():
+    """The showcase renders every symbology with its example data and options; none may fail."""
+    from app.engines.barcode import make_barcode
+
+    failures = []
+    for item in symbologies().values():
+        if not item["example"]:
+            failures.append((item["id"], "no example"))
+            continue
+        try:
+            make_barcode(item["id"], item["example"], parse_option_string(item["example_options"]))
+        except RenderError as exc:
+            failures.append((item["id"], str(exc)))
+    assert not failures, failures
