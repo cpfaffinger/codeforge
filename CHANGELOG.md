@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1 - 2026-10-27
+
+* version policy: no dependency is pinned to a minor or patch version any more. `pyzbar`/`pylibdmtx` (`<0.2` -> `<1`), `Pillow` (`<13` -> `<14`, 13.0 verified), `python-multipart` (`<1`), Dockerfile syntax `docker/dockerfile:1`; `reportlab` 5.x and `fastapi` 0.162 verified by the test suite
+* Dockerfile runs `apt-get upgrade` and `pip install --upgrade`, so Debian security fixes (e.g. libbrotli, openssl, zlib) and the newest allowed package releases are included on every rebuild, independent of the base image's own rebuild cadence
+* `tools/update_vendor.py` refreshes the vendored zxing-wasm to the latest release of its major (now 3.1.6); versions recorded in `app/static/vendor/VERSIONS`
+* note on the Brotli (.NET) incident: codeforge contains no Brotli code path - Python has no brotli module installed, HTTP compression uses zlib (gzip); only Debian's `libbrotli1` shared library is present in the base image and is now kept current by `apt-get upgrade`
+
 ## 1.4.0 - 2026-10-12
 
 * **decoder engine**: zxing-cpp is the primary decoder (QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar, several codes per image, own rotation/inversion/multi-scale search); the zbar pre-processing ladder and libdmtx remain as fallbacks. Results carry the precise `format`, `ec_level` and `symbology_identifier`

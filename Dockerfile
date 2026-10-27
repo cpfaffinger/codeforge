@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1
 # codeforge - QR / barcode service. Build: docker compose build   Test: docker build --target test .
 FROM python:3.12-slim AS base
 
@@ -9,14 +9,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # ghostscript renders BWIPP barcodes, libzbar0 decodes, libdmtx0 adds DataMatrix decoding,
 # fonts-urw-base35 provides the PostScript fonts BWIPP uses for human readable text
+# apt-get upgrade: Debian security fixes (openssl, zlib, brotli ...) land on every rebuild, even when the
+# python:3.12-slim base image has not been rebuilt yet; python packages float within their major (requirements.txt)
 RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends ghostscript fonts-urw-base35 libzbar0 \
     && (apt-get install -y --no-install-recommends libdmtx0t64 || apt-get install -y --no-install-recommends libdmtx0) \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /srv/codeforge
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install --upgrade -r requirements.txt
 
 COPY app ./app
 

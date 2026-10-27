@@ -1,13 +1,16 @@
+# Version policy: only the major version is pinned (upper bound = next major), minor and patch
+# versions float so every image rebuild picks up the latest releases and CVE fixes automatically.
+# Bump an upper bound deliberately after testing the new major (docker build --target test .).
 fastapi>=0.115,<1
 uvicorn[standard]>=0.30,<1
 pydantic>=2.7,<3
 pydantic-settings>=2.3,<3
-python-multipart>=0.0.9
+python-multipart>=0.0.9,<1
 segno>=1.6,<2
 treepoem>=3.20,<4
-Pillow>=10.3,<13
-pyzbar>=0.1.9,<0.2
-pylibdmtx>=0.1.10,<0.2
+Pillow>=10.3,<14
+pyzbar>=0.1.9,<1
+pylibdmtx>=0.1.10,<1
 zxing-cpp>=2.3,<4        # primary decoder (QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, 1D)
 pillow-heif>=0.18,<2    # HEIC/HEIF photos from iPhones
 setuptools>=70          # pylibdmtx imports distutils, removed from Python 3.12

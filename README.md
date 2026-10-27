@@ -176,6 +176,13 @@ A nightly `docker compose build --pull` (for example with
 [docker-housekeeping](https://github.com/cpfaffinger/docker-housekeeping)) keeps the base image
 and packages current; codeforge has no external build dependencies beyond PyPI and Debian packages.
 
+**Version policy:** nothing is pinned to a minor or patch version. Python packages float within their
+major version (`Pillow>=10.3,<14`, `fastapi<1` ...), the Dockerfile runs `apt-get upgrade` so Debian security
+fixes are included on every rebuild, the base image is `python:3.12-slim` (3.12.x patch releases float; the
+interpreter minor is an ABI boundary for the compiled wheels and is bumped deliberately), GitHub actions are
+pinned by major. The only static copies are the vendored browser decoders in `app/static/vendor/`;
+`python tools/update_vendor.py` refreshes them to the latest release within their major.
+
 ## Development
 
 ```bash
