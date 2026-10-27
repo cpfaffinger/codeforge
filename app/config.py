@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     max_batch_items: int = Field(200, description="Maximum items in one batch request.")
     max_upload_bytes: int = Field(16 * 1024 * 1024, description="Maximum upload size for the decoder (phone photos are 3-12 MB).")
     decode_budget: float = Field(8.0, description="Seconds the decoder may spend on pre-processing passes of one image.")
+    decode_batch_max_files: int = Field(20, description="Maximum images in one /api/v1/decode/batch request.")
+    decode_batch_budget: float = Field(60.0, description="Seconds one decode batch may take in total (stay below proxy timeouts, Cloudflare: 100 s).")
 
     # barcode engine
     gs_workers: int = Field(2, description="Persistent Ghostscript processes per uvicorn worker (0 = start gs per image via treepoem, slow).")

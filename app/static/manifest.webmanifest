@@ -16,6 +16,7 @@
   ],
   "shortcuts": [
     { "name": "Scan", "url": "/scan?source=pwa", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Decode files", "url": "/decode?source=pwa" },
     { "name": "Playground", "url": "/?source=pwa" }
   ]
 }

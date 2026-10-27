@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>codeforge scanner</title>
-<meta name="description" content="Scan QR codes and barcodes live with your camera; scans are kept locally and can be regenerated with codeforge.">
+<meta name="description" content="Scan QR codes and 1D/2D barcodes live with your camera; scans are kept locally and can be regenerated with codeforge.">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/style.css?v=__VERSION__">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -43,11 +43,8 @@
   .scan .acts button, .scan .acts a, .result .acts button, .result .acts a { font-size: .8rem; padding: .25rem .55rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); text-decoration: none; cursor: pointer; }
   .scan .acts a.primary, .result .acts a.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
   .empty { color: var(--muted); font-size: .9rem; }
-  .photo-box { border: 1px dashed var(--border); border-radius: 8px; padding: .6rem .8rem; display: flex; flex-direction: column; gap: .4rem; font-size: .9rem; }
-  .photo-box .progress { display: none; }
-  .photo-box.busy .progress { display: flex; }
-  .photo-box .msg.err { color: var(--err); }
-  .photo-box .msg.ok { color: var(--ok); }
+  .handoff { border: 1px dashed var(--border); border-radius: 8px; padding: .6rem .8rem; font-size: .9rem; display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; }
+  .handoff a.button { padding: .35rem .8rem; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); text-decoration: none; }
 </style>
 </head>
 <body>
@@ -57,6 +54,7 @@
     <a href="/">Playground</a>
     <a href="/showcase">Showcase</a>
     <a href="/scan"><strong>Scan</strong></a>
+    <a href="/decode">Decode files</a>
     <a href="/docs">API docs</a>
     <a href="https://github.com/cpfaffinger/codeforge" rel="noopener">GitHub</a>
   </nav>
@@ -68,7 +66,7 @@
       <div class="video-wrap">
         <video id="video" playsinline muted autoplay hidden></video>
         <canvas id="overlay" class="overlay" hidden></canvas>
-        <div class="hint" id="hint">Press <strong>Start camera</strong> and point it at a QR code or barcode.<br><span class="small">Camera access needs HTTPS and your permission. Decoding runs in your browser; frames are only sent to the server when no in-browser decoder is available.</span></div>
+        <div class="hint" id="hint">Press <strong>Start camera</strong> and point it at a QR code or barcode.<br><span class="small">1D barcodes: hold the phone so the bars run across the whole picture.</span><br><span class="small">Camera access needs HTTPS and your permission. Decoding runs in your browser; frames are only sent to the server when no in-browser decoder is available.</span></div>
         <div class="flash" id="flash"></div>
         <div class="live" id="live" hidden><span class="dot"></span> scanning <span id="fps"></span></div>
       </div>
@@ -83,6 +81,7 @@
       <div class="toolbar">
         <label><input type="checkbox" id="keepon"> keep the camera on after a scan</label>
         <label><input type="checkbox" id="beep" checked> beep</label>
+        <label>codes <select id="formats" title="which codes to look for - a narrower choice is faster and avoids accidental hits"></select></label>
         <label>engine <select id="engine-select"><option value="auto">auto</option><option value="BarcodeDetector">BarcodeDetector (browser)</option><option value="zxing-wasm">zxing-wasm (in-browser)</option><option value="ZXing">ZXing JS (in-browser, legacy)</option><option value="server">server (codeforge API)</option></select></label>
       </div>
       <div class="status"><span id="status">engine: detecting ...</span></div>
@@ -91,19 +90,19 @@
         <div class="raw" id="result-text"></div>
         <div class="acts" id="result-acts"></div>
       </div>
-      <div class="photo-box" id="photo-box">
-        <div><label class="small" style="cursor:pointer"><input type="file" id="photo" accept="image/*" capture="environment" hidden> <span style="text-decoration:underline;color:var(--accent)">Decode a photo instead</span></label> <span class="muted small">- taken with the camera or from your gallery, decoded on the server (works in every browser)</span></div>
-        <div class="progress"><div class="bar"><div class="fill"></div></div><div class="label"><span class="spinner"></span> <span id="photo-progress"></span></div></div>
-        <div class="msg" id="photo-msg"></div>
+      <div class="handoff">
+        <span>A screenshot, a picture from the gallery or many files at once?</span>
+        <a class="button" href="/decode">Decode images &amp; files</a>
       </div>
     </section>
 
     <section class="list">
-      <h2>Recent scans <span class="small muted" id="listinfo"></span></h2>
+      <h2>Camera scans <span class="small muted" id="listinfo"></span></h2>
       <div id="scans"></div>
       <div class="toolbar">
         <button id="clear">Clear list</button>
-        <span class="small muted">kept in this browser only (localStorage), duplicates are merged</span>
+        <button id="export">Export CSV</button>
+        <span class="small muted">camera scans, kept in this browser only (localStorage), duplicates are merged</span>
       </div>
     </section>
   </div>
@@ -114,103 +113,51 @@
 
 <script src="/static/vendor/zxing-reader.iife.js?v=__VERSION__"></script>
 <script src="/static/vendor/zxing-library.min.js"></script>
+<script src="/static/codes.js?v=__VERSION__"></script>
 <script>
 (function () {
   "use strict";
   const MAX_ITEMS = 50;
-  const KEY = "codeforge.scans.v1", KEEP_KEY = "codeforge.scan.keepon", ENGINE_KEY = "codeforge.scan.engine";
+  const KEY = "codeforge.scans.v1", KEEP_KEY = "codeforge.scan.keepon", ENGINE_KEY = "codeforge.scan.engine", FORMATS_KEY = "codeforge.scan.formats";
   const FRAME_INTERVAL_MS = 90;        // in-browser engines: ~11 fps
   const SERVER_INTERVAL_MS = 700;      // server fallback: one frame every 0.7 s
   const $ = (s) => document.querySelector(s);
   const video = $("#video"), overlay = $("#overlay"), hint = $("#hint"), flash = $("#flash"), status = $("#status"), cams = $("#cameras");
   const work = document.createElement("canvas"), wctx = work.getContext("2d", { willReadFrequently: true });
-  let engine = null, detector = null, zxingReader = null, wasmReady = false, running = false, stream = null, track = null;
+  let engine = null, detector = null, zxingReader = null, running = false, stream = null, track = null, group = "all";
   let lastResultKey = null, frameNo = 0, fpsCount = 0, fpsStamp = 0, loopHandle = null, serverBusy = false, lastFrameAt = 0;
 
-  // ---- format mapping (BarcodeDetector / ZXing / zbar names -> codeforge bcid) ----
-  const BCID = {
-    qr_code: "qrcode", QR_CODE: "qrcode", QRCODE: "qrcode",
-    ean_13: "ean13", EAN_13: "ean13", EAN13: "ean13", ean_8: "ean8", EAN_8: "ean8", EAN8: "ean8",
-    upc_a: "upca", UPC_A: "upca", UPCA: "upca", upc_e: "upce", UPC_E: "upce", UPCE: "upce",
-    code_128: "code128", CODE_128: "code128", CODE128: "code128", code_39: "code39", CODE_39: "code39", CODE39: "code39", code_93: "code93", CODE_93: "code93", CODE93: "code93",
-    itf: "interleaved2of5", ITF: "interleaved2of5", I25: "interleaved2of5", codabar: "rationalizedCodabar", CODABAR: "rationalizedCodabar",
-    data_matrix: "datamatrix", DATA_MATRIX: "datamatrix", DATAMATRIX: "datamatrix", pdf417: "pdf417", PDF_417: "pdf417", PDF417: "pdf417", aztec: "azteccode", AZTEC: "azteccode",
-    RSS_14: "databaromni", DATABAR: "databaromni", RSS_EXPANDED: "databarexpanded", DATABAR_EXP: "databarexpanded", MAXICODE: "maxicode",
-    QRCode: "qrcode", MicroQRCode: "microqrcode", rMQRCode: "rectangularmicroqrcode", DataMatrix: "datamatrix", Aztec: "azteccode", PDF417: "pdf417", MaxiCode: "maxicode",
-    "EAN-13": "ean13", "EAN-8": "ean8", "UPC-A": "upca", "UPC-E": "upce", Code128: "code128", Code39: "code39", Code93: "code93", Codabar: "rationalizedCodabar",
-    DataBar: "databaromni", DataBarExpanded: "databarexpanded", DataBarLimited: "databarlimited", "ITF-14": "itf14", MicroPDF417: "micropdf417",
-  };
-  function niceFormat(f) { return String(f).replace(/([a-z])([A-Z])/g, "$1 $2").toUpperCase().replace(/_/g, " "); }
-
-  // ---- storage ----
-  function load() { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; } }
-  function save(list) { try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX_ITEMS))); } catch (e) { /* private mode */ } }
-  function pref(key, def) { try { const v = localStorage.getItem(key); return v === null ? def : v; } catch (e) { return def; } }
-  function setPref(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* ignore */ } }
-
-  // ---- ui ----
-  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => (t.hidden = true), 1800); }
+  // ---- history (camera scans; files decoded on /decode have their own history) ----
+  const store = CF.History(KEY, MAX_ITEMS);
+  const { niceFormat, toast, pref, setPref } = CF;
   function setStatus(msg, isError) { status.textContent = msg; status.className = isError ? "err" : ""; }
-  function genLink(item) {
-    const bcid = BCID[item.format] || "";
-    if (!bcid || bcid === "qrcode") return "/?" + new URLSearchParams({ tab: "qr", data: item.text }).toString();
-    return "/?" + new URLSearchParams({ tab: "barcode", bcid, text: item.text, options: "includetext" }).toString();
-  }
-  function actions(item, idx) {
-    const isUrl = /^https?:\/\//i.test(item.text);
-    return '<a class="primary" href="' + esc(genLink(item)) + '">Generate with codeforge</a>' +
-      '<button data-copy="' + idx + '">Copy</button>' + (isUrl ? '<a href="' + esc(item.text) + '" target="_blank" rel="noopener">Open link</a>' : "") +
-      (idx >= 0 ? '<button data-del="' + idx + '">Delete</button>' : "");
-  }
-  function render(list, highlightKey) {
-    const box = $("#scans");
-    box.innerHTML = "";
-    $("#listinfo").textContent = list.length ? list.length + " / " + MAX_ITEMS : "";
-    if (!list.length) { box.innerHTML = '<div class="empty">No scans yet.</div>'; return; }
-    list.forEach((item, i) => {
-      const el = document.createElement("div");
-      el.className = "scan" + (highlightKey === item.format + "|" + item.text ? " new" : "");
-      el.innerHTML = '<div class="raw">' + esc(item.text) + "</div>" +
-        '<div class="meta"><span class="fmt">' + esc(niceFormat(item.format)) + "</span><span>" + new Date(item.last).toLocaleString() + "</span>" + (item.count > 1 ? "<span>seen " + item.count + "x</span>" : "") + (item.source ? "<span>" + esc(item.source) + "</span>" : "") + "</div>" +
-        '<div class="acts">' + actions(item, i) + "</div>";
-      box.appendChild(el);
-    });
-    box.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => { await navigator.clipboard.writeText(load()[+b.dataset.copy].text); toast("copied"); }));
-    box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { const l = load(); l.splice(+b.dataset.del, 1); save(l); render(l); }));
-  }
-  $("#clear").addEventListener("click", () => { if (confirm("Delete all stored scans?")) { save([]); render([]); } });
+  function render(highlightKey) { CF.renderHistory(store, $("#scans"), $("#listinfo"), highlightKey, "No scans yet."); }
+  $("#clear").addEventListener("click", () => { if (confirm("Delete all stored scans?")) { store.clear(); render(); } });
+  $("#export").addEventListener("click", () => CF.download("codeforge-scans.csv", CF.historyCsv(store)));
   function showResult(item, meta) {
     const r = $("#result"); r.classList.add("show");
     $("#result-meta").textContent = niceFormat(item.format) + " - " + meta;
     $("#result-text").textContent = item.text;
-    $("#result-acts").innerHTML = actions(item, -1);
-    $("#result-acts [data-copy]").addEventListener("click", async () => { await navigator.clipboard.writeText(item.text); toast("copied"); });
+    $("#result-acts").innerHTML = CF.actionsHtml(item, -1);
+    $("#result-acts [data-copy]").addEventListener("click", () => CF.copy(item.text));
   }
   function beep() {
     try { const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 1400; g.gain.value = .08; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + .08); } catch (e) { /* no audio */ }
   }
 
-  // a result from any source: de-duplicate, store, show
+  // a result from the camera: de-duplicate, store, show
   function addScan(text, format, source, points, meta) {
+    if (!CF.matches(format, group)) return false;
     const k = format + "|" + text;
-    if (source === "video" && k === lastResultKey) return false;   // same code still in front of the camera: ignore
+    if (k === lastResultKey) return false;   // same code still in front of the camera: ignore
     lastResultKey = k;
-    const now = Date.now();
-    const list = load();
-    const idx = list.findIndex((s) => s.text === text && s.format === format);
-    let item;
-    if (idx >= 0) { item = list.splice(idx, 1)[0]; item.count = (item.count || 1) + 1; item.last = now; }
-    else { item = { text, format, first: now, last: now, count: 1 }; }
-    item.source = source === "video" ? "camera" : "photo";
-    list.unshift(item);
-    save(list);
-    render(list, k);
-    showResult(item, (meta || source) + " - " + new Date(now).toLocaleTimeString());
+    const item = store.add(text, format, { source: "camera" });
+    render(k);
+    showResult(item, (meta || source) + " - " + new Date(item.last).toLocaleTimeString());
     if ($("#beep").checked) beep();
     flash.classList.add("on"); setTimeout(() => flash.classList.remove("on"), 250);
     if (points) drawPoints(points);
-    if (source === "video" && !$("#keepon").checked) { setTimeout(stop, 350); setStatus("scanned - camera stopped (enable 'keep the camera on' to continue scanning)"); }
+    if (!$("#keepon").checked) { setTimeout(stop, 350); setStatus("scanned - camera stopped (enable 'keep the camera on' to continue scanning)"); }
     return true;
   }
 
@@ -224,36 +171,41 @@
       return r.some((x) => x.rawValue === "codeforge-selftest");
     } catch (e) { return false; }
   }
+  const GROUP_NOTE = () => (group === "all" ? "" : " - " + CF.GROUPS[group]);
   async function pickEngine(preferred) {
     engine = null; detector = null; zxingReader = null;
     const want = preferred || "auto";
     if ((want === "auto" || want === "BarcodeDetector") && "BarcodeDetector" in window) {
       try {
         const supported = await window.BarcodeDetector.getSupportedFormats();
-        if (supported.length) {
-          const d = new window.BarcodeDetector({ formats: supported });
-          if (await selfTestDetector(d)) { detector = d; engine = "BarcodeDetector"; setStatus("engine: BarcodeDetector (" + supported.length + " formats, native)"); return; }
+        if (supported.length && await selfTestDetector(new window.BarcodeDetector({ formats: supported }))) {
+          const wanted = supported.filter((f) => CF.matches(f, group));
+          if (wanted.length) {
+            detector = new window.BarcodeDetector({ formats: wanted }); engine = "BarcodeDetector";
+            setStatus("engine: BarcodeDetector (" + wanted.length + " formats, native)" + GROUP_NOTE()); return;
+          }
         }
       } catch (e) { /* fall through */ }
       if (want === "BarcodeDetector") setStatus("BarcodeDetector is not available in this browser - using ZXing", true);
     }
-    if ((want === "auto" || want === "BarcodeDetector" || want === "zxing-wasm") && window.ZXingWASM && window.ZXingWASM.readBarcodes && typeof WebAssembly === "object") {
+    if ((want === "auto" || want === "BarcodeDetector" || want === "zxing-wasm") && CF.wasmAvailable()) {
       try {
-        if (!wasmReady) {
-          setStatus("loading the zxing-wasm decoder (1 MB) ...");
-          await ZXingWASM.prepareZXingModule({ overrides: { locateFile: (p, prefix) => (p.endsWith(".wasm") ? "/static/vendor/zxing_reader.wasm" : prefix + p) }, fireImmediately: true });
-          wasmReady = true;
-        }
-        engine = "zxing-wasm"; setStatus("engine: zxing-wasm (in-browser: QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, all 1D)"); return;
+        if (!CF.isWasmReady()) setStatus("loading the zxing-wasm decoder (1 MB) ...");
+        await CF.ensureWasm();
+        engine = "zxing-wasm"; setStatus("engine: zxing-wasm (in-browser: QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MaxiCode, all 1D)" + GROUP_NOTE()); return;
       } catch (e) { setStatus("zxing-wasm could not be loaded (" + e.message + ") - using ZXing JS", true); }
     }
     if ((want === "auto" || want === "BarcodeDetector" || want === "zxing-wasm" || want === "ZXing") && window.ZXing && window.ZXing.MultiFormatReader) {
       const hints = new Map();
       hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      if (group !== "all") {
+        const fmts = Object.keys(ZXing.BarcodeFormat).filter((k) => isNaN(+k) && CF.matches(k, group)).map((k) => ZXing.BarcodeFormat[k]);
+        if (fmts.length) hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
+      }
       zxingReader = new ZXing.MultiFormatReader(); zxingReader.setHints(hints);
-      engine = "ZXing"; setStatus("engine: ZXing JS (in-browser, legacy)"); return;
+      engine = "ZXing"; setStatus("engine: ZXing JS (in-browser, legacy)" + GROUP_NOTE()); return;
     }
-    engine = "server"; setStatus("engine: server - frames are sent to the codeforge API (" + (want === "server" ? "selected" : "no in-browser decoder available") + ")");
+    engine = "server"; setStatus("engine: server - frames are sent to the codeforge API (" + (want === "server" ? "selected" : "no in-browser decoder available") + ")" + GROUP_NOTE());
   }
 
   // grab a frame into the work canvas; alternate full frame / centre crop / inverted
@@ -298,9 +250,8 @@
     } else if (engine === "zxing-wasm") {
       // zxing-cpp searches rotated, inverted and downscaled copies itself and returns every code in the frame
       const data = wctx.getImageData(0, 0, work.width, work.height);
-      const results = await ZXingWASM.readBarcodes(data, { tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, maxNumberOfSymbols: 4 });
+      const results = await CF.wasmRead(data, group, { maxNumberOfSymbols: 4 });
       results.forEach((r) => {
-        if (!r.isValid || !r.text) return;
         const p = r.position; const pts = p ? [p.topLeft, p.topRight, p.bottomRight, p.bottomLeft] : [];
         addScan(r.text, r.format || "UNKNOWN", "video", pts.length ? mapPoints(pts, frame) : null, "zxing-wasm");
       });
@@ -318,7 +269,7 @@
       serverBusy = true;
       try {
         const dataUrl = work.toDataURL("image/jpeg", 0.8);
-        const r = await fetch("/api/v1/decode/base64?try_harder=false", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: dataUrl }) });
+        const r = await fetch("/api/v1/decode/base64?try_harder=false" + (group !== "all" ? "&formats=" + group : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: dataUrl }) });
         const j = await r.json();
         if (r.ok) j.symbols.forEach((s) => addScan(s.data, s.type, "video", s.polygon && s.polygon.length ? mapPoints(s.polygon, frame) : null, "server"));
         else setStatus("server: " + (j.detail || r.status), true);
@@ -404,33 +355,8 @@
   $("#engine-select").addEventListener("change", async (e) => { setPref(ENGINE_KEY, e.target.value); const was = running; if (was) stop(); await pickEngine(e.target.value); if (was) start(); });
   $("#keepon").addEventListener("change", (e) => setPref(KEEP_KEY, e.target.checked ? "1" : "0"));
 
-  // photo fallback: decode on the server (works in every browser)
-  $("#photo").addEventListener("change", (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    const box = $("#photo-box"), msg = $("#photo-msg"), prog = $("#photo-progress"), fill = box.querySelector(".fill");
-    msg.textContent = ""; msg.className = "msg"; box.classList.add("busy"); fill.style.width = "0%"; fill.classList.remove("indeterminate");
-    const fd = new FormData(); fd.append("file", f, f.name || "photo.jpg");
-    const xhr = new XMLHttpRequest(); xhr.open("POST", "/api/v1/decode"); xhr.timeout = 120000;
-    const t0 = Date.now(); let timer = null;
-    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) { fill.style.width = Math.round(ev.loaded / ev.total * 100) + "%"; prog.textContent = "uploading " + Math.round(ev.loaded / 1024) + " of " + Math.round(ev.total / 1024) + " kB ..."; } };
-    xhr.upload.onload = () => { fill.classList.add("indeterminate"); timer = setInterval(() => { prog.textContent = "decoding on the server ... " + ((Date.now() - t0) / 1000).toFixed(1) + " s"; }, 200); };
-    const done = () => { clearInterval(timer); box.classList.remove("busy"); e.target.value = ""; };
-    xhr.onload = () => {
-      done();
-      let j = null; try { j = JSON.parse(xhr.responseText); } catch (err) { j = { detail: "HTTP " + xhr.status }; }
-      if (xhr.status !== 200) { msg.className = "msg err"; msg.textContent = "decode failed: " + (typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail)); return; }
-      if (!j.count) { msg.className = "msg err"; msg.innerHTML = "<strong>No code found</strong> (" + j.width + "x" + j.height + " px, " + j.elapsed_ms + " ms, " + j.passes + " passes)<ul>" + (j.hints || []).map((h) => "<li>" + esc(h) + "</li>").join("") + "</ul>"; return; }
-      lastResultKey = null;
-      j.symbols.forEach((s) => addScan(s.data, s.type, "photo", null, "photo via " + (s.engine || "server") + (s.found_by ? " (" + s.found_by + ")" : "")));
-      msg.className = "msg ok"; msg.textContent = j.count + " code(s) found in " + j.elapsed_ms + " ms";
-    };
-    xhr.onerror = () => { done(); msg.className = "msg err"; msg.textContent = "upload failed: network error"; };
-    xhr.ontimeout = () => { done(); msg.className = "msg err"; msg.textContent = "upload failed: timeout"; };
-    xhr.send(fd);
-  });
-
   // ---- PWA: installable, assets cached by the service worker ----
-  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
+  CF.registerServiceWorker();
   let installEvent = null;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; $("#install").hidden = false; });
   $("#install").addEventListener("click", async () => { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; $("#install").hidden = true; });
@@ -439,7 +365,10 @@
   // ---- init ----
   $("#keepon").checked = pref(KEEP_KEY, "0") === "1";
   $("#engine-select").value = pref(ENGINE_KEY, "auto");
-  render(load());
+  group = pref(FORMATS_KEY, "all");
+  CF.fillGroupSelect($("#formats"), group); group = $("#formats").value;
+  $("#formats").addEventListener("change", async (e) => { group = e.target.value; setPref(FORMATS_KEY, group); lastResultKey = null; const was = running; if (was) stop(); await pickEngine($("#engine-select").value); if (was) start(); });
+  render();
   pickEngine($("#engine-select").value);
   window.addEventListener("pagehide", stop);
   document.addEventListener("visibilitychange", () => { if (document.hidden && running) { stop(); setStatus("camera stopped (page hidden)"); } });

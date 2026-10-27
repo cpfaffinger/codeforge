@@ -110,6 +110,35 @@ class DecodeResponse(BaseModel):
     hints: list[str] = Field(default_factory=list, description="Why nothing was found and what to try, when count is 0.")
 
 
+class DecodeBatchItem(BaseModel):
+    index: int
+    filename: str | None = None
+    size: int = Field(..., description="Bytes received for this file.")
+    ok: bool = Field(..., description="false when the file could not be read or the batch time budget ran out.")
+    error: str | None = None
+    count: int = 0
+    symbols: list[DecodedSymbol] = Field(default_factory=list)
+    width: int | None = None
+    height: int | None = None
+    elapsed_ms: int | None = None
+    passes: int | None = None
+    hints: list[str] = Field(default_factory=list)
+
+
+class DecodeBatchResponse(BaseModel):
+    files: int = Field(..., description="Number of files in the request.")
+    decoded: int = Field(..., description="Files that were read (ok), with or without a code.")
+    with_codes: int = Field(..., description="Files in which at least one code was found.")
+    symbols: int = Field(..., description="Codes found in all files.")
+    elapsed_ms: int
+    items: list[DecodeBatchItem]
+
+
+class DecodeFormats(BaseModel):
+    groups: dict[str, list[str]] = Field(..., description="Groups usable in ?formats=: qr, 2d, 1d (all = no filter).")
+    types: list[str] = Field(..., description="Every symbol type the server decoder can report.")
+
+
 class DecodeBase64Request(BaseModel):
     image: str = Field(..., description="Base64 encoded image, optionally as data URI.", examples=["data:image/png;base64,iVBORw0KGgo..."])
 

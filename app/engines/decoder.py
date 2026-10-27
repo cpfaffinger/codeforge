@@ -147,6 +147,46 @@ _ZXING_TYPES = {
 }
 
 
+# ---- format groups for the ``formats`` filter (API ``?formats=1d``, ``qr,ean13`` ...)
+QR_TYPES = frozenset({"QRCODE", "MICROQR", "RMQR"})
+MATRIX_TYPES = QR_TYPES | {"DATAMATRIX", "AZTEC", "AZTECRUNE", "PDF417", "MICROPDF417", "MAXICODE", "SQCODE"}
+LINEAR_TYPES = frozenset({
+    "EAN13", "EAN8", "EAN2", "EAN5", "UPCA", "UPCE", "ISBN", "ISBN10", "ISBN13", "CODE128", "CODE39", "CODE32", "PZN", "CODE93",
+    "I25", "ITF14", "CODABAR", "DATABAR", "DATABAR_LTD", "DATABAR_EXP", "TELEPEN", "DXFILMEDGE",
+})
+FORMAT_GROUPS = {"qr": QR_TYPES, "2d": MATRIX_TYPES, "1d": LINEAR_TYPES}
+_GROUP_ALIASES = {"matrix": "2d", "linear": "1d", "barcode": "1d", "barcodes": "1d", "1d-barcodes": "1d", "qrcode": "qr"}
+_TYPE_ALIASES = {"ITF": "I25", "INTERLEAVED2OF5": "I25", "MICROQRCODE": "MICROQR", "RMQRCODE": "RMQR", "DATABAREXPANDED": "DATABAR_EXP",
+                 "DATABAREXP": "DATABAR_EXP", "DATABARLIMITED": "DATABAR_LTD", "DATABARLTD": "DATABAR_LTD", "AZTECCODE": "AZTEC"}
+
+
+def known_types() -> list[str]:
+    return sorted(MATRIX_TYPES | LINEAR_TYPES)
+
+
+def parse_formats(spec: str | None) -> frozenset[str] | None:
+    """``None``/``""``/``all`` -> no filter; otherwise a comma list of groups (qr, 2d, 1d) and/or types (EAN13, CODE128 ...)."""
+    if spec is None or not spec.strip():
+        return None
+    out: set[str] = set()
+    for raw in spec.split(","):
+        token = raw.strip().lower()
+        if not token:
+            continue
+        if token in ("all", "any", "*"):
+            return None
+        token = _GROUP_ALIASES.get(token, token)
+        if token in FORMAT_GROUPS:
+            out |= FORMAT_GROUPS[token]
+            continue
+        name = raw.strip().upper().replace("-", "").replace(" ", "")
+        name = _TYPE_ALIASES.get(name, name)
+        if name not in MATRIX_TYPES and name not in LINEAR_TYPES:
+            raise RenderError(f"unknown format {raw.strip()!r}: use all, qr, 2d, 1d or a type out of {', '.join(known_types())}")
+        out.add(name)
+    return frozenset(out) or None
+
+
 def _zxing_symbols(img: Image.Image, found_by: str, *, try_harder: bool, scale: float = 1.0, offset: tuple[int, int] = (0, 0)) -> list[dict[str, Any]]:
     import zxingcpp
 
@@ -267,13 +307,13 @@ def _dmtx_symbols(gray: Image.Image, timeout_ms: int) -> list[dict[str, Any]]:
 
 
 # ------------------------------------------------------------------- pipeline
-def decode_image(content: bytes, *, try_harder: bool = True, budget: float | None = None) -> list[dict[str, Any]]:
+def decode_image(content: bytes, *, try_harder: bool = True, budget: float | None = None, formats: frozenset[str] | None = None) -> list[dict[str, Any]]:
     """Return every symbol found in the image (compatibility wrapper around :func:`decode_image_full`)."""
-    return decode_image_full(content, try_harder=try_harder, budget=budget).symbols
+    return decode_image_full(content, try_harder=try_harder, budget=budget, formats=formats).symbols
 
 
-def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float | None = None) -> DecodeResult:
-    """Decode with every engine; stops at the first pass that finds something."""
+def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float | None = None, formats: frozenset[str] | None = None) -> DecodeResult:
+    """Decode with every engine; stops at the first pass that finds something (of the wanted ``formats``)."""
     t0 = time.monotonic()
     budget = settings.decode_budget if budget is None else budget
     img = _open_image(content)
@@ -281,6 +321,14 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
     gray = img.convert("L")
     have_zxing, have_zbar, have_dmtx = zxing_available(), zbar_available(), dmtx_available()
     seen: set[tuple[str, str]] = set()
+    skipped: set[str] = set()
+
+    def wanted(symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        # symbols of other formats do not end the search: the wanted code may need a later pass
+        if formats is None:
+            return symbols
+        skipped.update(s["type"] for s in symbols if s["type"] not in formats)
+        return [s for s in symbols if s["type"] in formats]
 
     def add(symbols: list[dict[str, Any]]) -> None:
         for s in symbols:
@@ -305,7 +353,7 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
                 break
             result.passes += 1
             try:
-                found = _zxing_symbols(variant, name, try_harder=try_harder)
+                found = wanted(_zxing_symbols(variant, name, try_harder=try_harder))
             except Exception as exc:  # pragma: no cover
                 log.warning("zxingcpp failed on %s: %s", name, exc)
                 found = []
@@ -320,7 +368,7 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
                 break
             result.passes += 1
             try:
-                found = _zbar_symbols(variant, scale, "zbar/" + name)
+                found = wanted(_zbar_symbols(variant, scale, "zbar/" + name))
             except Exception as exc:  # pragma: no cover - zbar internal assertion
                 log.warning("zbar failed on pass %s: %s", name, exc)
                 found = []
@@ -329,7 +377,7 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
                 break
 
     # DataMatrix fallback: only spend the (slow) libdmtx time when nothing else was found
-    if have_dmtx and not result.symbols:
+    if have_dmtx and not result.symbols and (formats is None or "DATAMATRIX" in formats):
         remaining = budget - (time.monotonic() - t0)
         if remaining > 0.3:
             result.passes += 1
@@ -341,6 +389,8 @@ def decode_image_full(content: bytes, *, try_harder: bool = True, budget: float 
     result.elapsed_ms = int((time.monotonic() - t0) * 1000)
     if not result.symbols:
         result.hints = _hints(img, have_zxing or have_zbar, have_zxing or have_dmtx, timed_out)
+        if skipped:
+            result.hints.insert(0, f"found {', '.join(sorted(skipped))}, which the formats filter excludes - decode without formats= to get it")
     with _stats_lock:
         STATS["images"] += 1
         STATS["symbols"] += len(result.symbols)

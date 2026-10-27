@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import time
 import zipfile
 from typing import Any
 
@@ -15,13 +16,16 @@ from starlette.datastructures import UploadFile
 from app.config import settings
 from app.engines import barcode as barcode_engine
 from app.engines import qr as qr_engine
-from app.engines.decoder import decode_image_full, dmtx_available, zbar_available
+from app.engines.decoder import FORMAT_GROUPS, decode_image_full, dmtx_available, known_types, parse_formats, zbar_available
 from app.engines.render import ALL_FORMATS, RenderError, Rendered, label_sheet
 from app.models import (
     BarcodeParams,
     BatchRequest,
     BatchResponse,
     DecodeBase64Request,
+    DecodeBatchItem,
+    DecodeBatchResponse,
+    DecodeFormats,
     DecodeResponse,
     QrParams,
     RenderedItem,
@@ -179,6 +183,8 @@ def limits():
         "max_image_pixels": settings.max_image_pixels,
         "max_batch_items": settings.max_batch_items,
         "decode_budget_seconds": settings.decode_budget,
+        "decode_batch_max_files": settings.decode_batch_max_files,
+        "decode_batch_budget_seconds": settings.decode_batch_budget,
         "rate_limit": settings.rate_limit,
     }
 
@@ -192,16 +198,29 @@ Three ways to send the image:
 * the **raw image as the request body** with its `Content-Type` (`curl --data-binary @photo.jpg -H 'Content-Type: image/jpeg'`)
 * **base64** JSON via `POST /api/v1/decode/base64`
 
-Photos are pre-processed in several passes (downscaling, contrast, illumination flattening, inversion)
-until something is found or the time budget runs out; `found_by` tells which pass succeeded. Supported
-input formats: PNG, JPEG, GIF, BMP, WEBP, TIFF (not HEIC/HEIF). Readable symbologies: QR Code, EAN/UPC,
-Code 128/39/93, ITF, Codabar, GS1 DataBar, PDF417 and DataMatrix.
+Many images at once: `POST /api/v1/decode/batch`.
+
+**Symbologies:** 2D codes (QR, Micro QR, rMQR, DataMatrix, Aztec, PDF417, MicroPDF417, MaxiCode) and 1D barcodes
+(EAN-13/8, UPC-A/E, ISBN, Code 128/39/93, ITF/ITF-14, Codabar, GS1 DataBar, PZN, Telepen ...). Restrict the search with
+`formats`: `qr`, `2d`, `1d`, single types (`ean13,code128`) or combinations (`qr,1d`); `GET /api/v1/decode/formats` lists them.
+Other symbols in the image are ignored and do not end the search.
+
+Photos are pre-processed in several passes (zxing-cpp with rotation/inversion/downscaling, sharpening, illumination
+flattening, the zbar ladder, libdmtx) until something is found or the time budget runs out; `found_by` tells which pass
+succeeded. Input formats: PNG, JPEG, GIF, BMP, WEBP, TIFF, HEIC/HEIF (iPhone).
 """
 
 
-def _decode_response(content: bytes, try_harder: bool) -> dict[str, Any]:
+def _formats(spec: str | None) -> frozenset[str] | None:
     try:
-        return decode_image_full(content, try_harder=try_harder).as_dict()
+        return parse_formats(spec)
+    except RenderError as exc:
+        raise _bad(exc)
+
+
+def _decode_response(content: bytes, try_harder: bool, formats: frozenset[str] | None = None) -> dict[str, Any]:
+    try:
+        return decode_image_full(content, try_harder=try_harder, formats=formats).as_dict()
     except RenderError as exc:
         raise _bad(exc)
 
@@ -224,8 +243,13 @@ def _decode_response(content: bytes, try_harder: bool) -> dict[str, Any]:
         }
     },
 )
-async def decode_upload(request: Request, try_harder: bool = Query(True, description="run the pre-processing ladder (slower, finds more); false = one plain pass")):
+async def decode_upload(
+    request: Request,
+    try_harder: bool = Query(True, description="run the pre-processing ladder (slower, finds more); false = one plain pass"),
+    formats: str | None = Query(None, description="restrict to qr, 2d, 1d and/or types like ean13,code128 (default: all)"),
+):
     _require_decoder()
+    wanted = _formats(formats)
     content_type = request.headers.get("content-type", "")
     length = request.headers.get("content-length")
     if length and length.isdigit() and int(length) > settings.max_upload_bytes + 4096:
@@ -239,18 +263,91 @@ async def decode_upload(request: Request, try_harder: bool = Query(True, descrip
     else:
         content = await request.body()
     # decoding is CPU bound: run it in the threadpool so the event loop keeps serving other requests
-    return await run_in_threadpool(_decode_response, content, try_harder)
+    return await run_in_threadpool(_decode_response, content, try_harder, wanted)
 
 
 @router.post("/decode/base64", tags=["decode"], summary="Decode from a base64 encoded image", description="Same as `/decode`, image as base64 string or data URI in JSON.", response_model=DecodeResponse)
-def decode_b64(body: DecodeBase64Request, try_harder: bool = Query(True)):
+def decode_b64(body: DecodeBase64Request, try_harder: bool = Query(True), formats: str | None = Query(None, description="restrict to qr, 2d, 1d and/or types like ean13,code128 (default: all)")):
     _require_decoder()
+    wanted = _formats(formats)
     payload = body.image.split(",", 1)[1] if body.image.startswith("data:") and "," in body.image else body.image
     try:
         content = base64.b64decode(payload, validate=False)
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="image is not valid base64")
-    return _decode_response(content, try_harder)
+    return _decode_response(content, try_harder, wanted)
+
+
+@router.get("/decode/formats", tags=["decode"], summary="Symbol types and groups for the formats filter", response_model=DecodeFormats)
+def decode_formats():
+    return {"groups": {k: sorted(v) for k, v in FORMAT_GROUPS.items()}, "types": known_types()}
+
+
+def _decode_batch(files: list[tuple[str | None, bytes]], try_harder: bool, wanted: frozenset[str] | None) -> dict[str, Any]:
+    t0 = time.monotonic()
+    items: list[dict[str, Any]] = []
+    for idx, (name, content) in enumerate(files):
+        remaining = settings.decode_batch_budget - (time.monotonic() - t0)
+        if remaining < 0.5:
+            items.append(DecodeBatchItem(index=idx, filename=name, size=len(content), ok=False, error="batch time budget exhausted - send this file again").model_dump())
+            continue
+        try:
+            r = decode_image_full(content, try_harder=try_harder, budget=min(settings.decode_budget, remaining), formats=wanted).as_dict()
+            items.append(DecodeBatchItem(index=idx, filename=name, size=len(content), ok=True, **r).model_dump())
+        except RenderError as exc:
+            items.append(DecodeBatchItem(index=idx, filename=name, size=len(content), ok=False, error=str(exc)).model_dump())
+    return DecodeBatchResponse(
+        files=len(items),
+        decoded=sum(1 for i in items if i["ok"]),
+        with_codes=sum(1 for i in items if i["count"]),
+        symbols=sum(i["count"] for i in items),
+        elapsed_ms=int((time.monotonic() - t0) * 1000),
+        items=items,
+    ).model_dump()
+
+
+@router.post(
+    "/decode/batch",
+    tags=["decode"],
+    summary="Decode many images in one request",
+    description="multipart/form-data with one or more files (any field name, e.g. `curl -F file=@a.jpg -F file=@b.png`). "
+    "Every file gets its own result in `items`, in upload order; unreadable files are reported with `ok: false` and do not fail "
+    "the batch. Limits: `decode_batch_max_files` files, `max_upload_bytes` per file and a total time budget "
+    "(`decode_batch_budget_seconds`, see `/api/v1/limits`); files after the budget are returned with an error to resend them.",
+    response_model=DecodeBatchResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {"multipart/form-data": {"schema": {"type": "object", "properties": {"file": {"type": "array", "items": {"type": "string", "format": "binary"}}}, "required": ["file"]}}},
+            "required": True,
+        }
+    },
+)
+async def decode_batch(
+    request: Request,
+    try_harder: bool = Query(True, description="run the pre-processing ladder per image"),
+    formats: str | None = Query(None, description="restrict to qr, 2d, 1d and/or types like ean13,code128 (default: all)"),
+):
+    _require_decoder()
+    wanted = _formats(formats)
+    if not request.headers.get("content-type", "").startswith("multipart/form-data"):
+        raise HTTPException(status_code=400, detail="send the images as multipart/form-data (curl -F file=@a.jpg -F file=@b.jpg)")
+    max_total = settings.max_upload_bytes * settings.decode_batch_max_files
+    length = request.headers.get("content-length")
+    if length and length.isdigit() and int(length) > max_total + 65536:
+        raise HTTPException(status_code=413, detail=f"batch is larger than {max_total // (1024 * 1024)} MB")
+    form = await request.form(max_files=settings.decode_batch_max_files + 1)
+    uploads = [v for _, v in form.multi_items() if isinstance(v, UploadFile)]
+    if not uploads:
+        raise HTTPException(status_code=400, detail="no files in the request (multipart fields with a filename)")
+    if len(uploads) > settings.decode_batch_max_files:
+        raise HTTPException(status_code=400, detail=f"at most {settings.decode_batch_max_files} files per batch")
+    files: list[tuple[str | None, bytes]] = []
+    for up in uploads:
+        content = await up.read()
+        if len(content) > settings.max_upload_bytes:
+            raise HTTPException(status_code=413, detail=f"{up.filename}: larger than {settings.max_upload_bytes // (1024 * 1024)} MB")
+        files.append((up.filename, content))
+    return await run_in_threadpool(_decode_batch, files, try_harder, wanted)
 
 
 def _require_decoder() -> None:

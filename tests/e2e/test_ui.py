@@ -150,3 +150,91 @@ def test_showcase_groups_and_filter(page, base_url):
     page.fill("#filter", "d3aqr")
     page.wait_for_function("document.getElementById('count').textContent.startsWith('1 of')")
     assert page.locator(".card:not([hidden]) .req").count() == 1
+
+
+def _blank_png() -> bytes:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (320, 240), (200, 190, 180)).save(buf, "PNG")
+    return buf.getvalue()
+
+
+def _decode_page(page, base_url):
+    page.goto(base_url + "/decode")
+    page.evaluate("() => { localStorage.removeItem('codeforge.decodes.v1'); localStorage.removeItem('codeforge.decode.formats'); }")
+    page.reload()
+    page.wait_for_function("window.CF && CF.isWasmReady()", timeout=15000)
+    return page
+
+
+def _wait_jobs_done(page, n):
+    page.wait_for_function(f"document.querySelectorAll('.job.found, .job.none, .job.failed').length >= {n}", timeout=30000)
+
+
+def test_decode_page_batch_browser_first_and_history(page, base_url):
+    """Several files at once: the QR code is read in the browser (never uploaded), the others go to the server;
+    'Choose images' offers the gallery (no capture attribute), results land in the decode history, not in the scan history."""
+    _decode_page(page, base_url)
+    assert page.get_attribute("#files", "capture") is None and page.get_attribute("#files", "multiple") is not None
+    assert page.get_attribute("#camera", "capture") == "environment"
+    posts = []
+    page.on("request", lambda r: posts.append(r.url) if r.method == "POST" else None)
+    qr = page.request.get(base_url + "/api/v1/qr?data=LPA:1$example.com$TEST-ACTIVATION&scale=4").body()
+    page.set_input_files("#files", [
+        {"name": "esim.png", "mimeType": "image/png", "buffer": qr},
+        {"name": "blank.png", "mimeType": "image/png", "buffer": _blank_png()},
+        {"name": "notes.txt", "mimeType": "text/plain", "buffer": b"no image"},
+    ])
+    _wait_jobs_done(page, 3)
+    assert page.locator(".job.found").count() == 1 and page.locator(".job.none").count() == 1 and page.locator(".job.failed").count() == 1
+    found = page.locator(".job.found")
+    assert "not uploaded" in found.locator(".state").text_content() and "browser" in found.locator(".timing").text_content()
+    assert found.locator(".code .raw").text_content() == "LPA:1$example.com$TEST-ACTIVATION"
+    assert "no code found" in page.locator(".job.none .state").text_content() and "upload" in page.locator(".job.none .timing").text_content()
+    assert "not a readable image" in page.locator(".job.failed .state").text_content()
+    assert len(posts) == 2  # blank.png and notes.txt; the QR code never left the browser
+    assert "3 files" in page.text_content("#summary-text") and "1 with codes" in page.text_content("#summary-text")
+    assert page.locator("#history .scan").count() == 1 and "esim.png" in page.text_content("#history")
+    page.reload()
+    page.wait_for_selector("#history .scan")
+    assert page.locator("#history .scan").count() == 1  # persisted
+    assert "LPA:1" not in (page.evaluate("localStorage.getItem('codeforge.scans.v1')") or "")  # separate from the camera history
+
+
+def test_decode_page_server_fallback_with_timing(page, base_url):
+    _decode_page(page, base_url)
+    page.evaluate("() => { window.ZXingWASM.readBarcodes = async () => { throw new Error('unsupported image'); }; }")
+    png = page.request.get(base_url + "/api/v1/qr?data=server-fallback&scale=4").body()
+    page.set_input_files("#files", {"name": "a.png", "mimeType": "image/png", "buffer": png})
+    _wait_jobs_done(page, 1)
+    assert "found by the server" in page.text_content(".job .state")
+    timing = page.text_content(".job .timing")
+    assert "upload" in timing and "server" in timing and "total" in timing
+
+
+def test_decode_page_formats_filter(page, base_url):
+    """1D barcodes only: a QR code is ignored in the browser and on the server, which says why."""
+    _decode_page(page, base_url)
+    page.select_option("#formats", "1d")
+    png = page.request.get(base_url + "/api/v1/qr?data=only-qr&scale=4").body()
+    page.set_input_files("#files", {"name": "qr.png", "mimeType": "image/png", "buffer": png})
+    _wait_jobs_done(page, 1)
+    assert page.locator(".job.none").count() == 1
+    assert "formats filter excludes" in page.text_content(".job .state")
+    page.reload()
+    assert page.input_value("#formats") == "1d"  # remembered
+
+
+def test_scanner_formats_select(scanner):
+    page = scanner
+    page.select_option("#formats", "1d")
+    page.wait_for_function("document.getElementById('status').textContent.includes('1D barcodes')")
+    page.click("#start")
+    page.wait_for_timeout(2500)  # a QR code in front of the camera is not a 1D barcode
+    assert not page.evaluate("document.getElementById('result').classList.contains('show')")
+    page.select_option("#formats", "qr")
+    page.wait_for_selector("#result.show", timeout=10000)
+    assert page.text_content("#result-text") == "first-code-1"

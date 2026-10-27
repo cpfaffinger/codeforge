@@ -4,8 +4,8 @@
 const VERSION = "__VERSION__";
 const CACHE = "codeforge-" + VERSION;
 const SHELL = [
-  "/scan", "/", "/showcase",
-  "/static/style.css?v=" + VERSION, "/static/app.js?v=" + VERSION,
+  "/scan", "/decode", "/", "/showcase",
+  "/static/style.css?v=" + VERSION, "/static/app.js?v=" + VERSION, "/static/codes.js?v=" + VERSION,
   "/static/vendor/zxing-reader.iife.js?v=" + VERSION, "/static/vendor/zxing_reader.wasm",
   "/static/vendor/zxing-library.min.js", "/static/favicon.svg", "/static/icons/icon-192.png",
 ];

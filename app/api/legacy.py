@@ -74,6 +74,11 @@ def scan():
     return _page("scan.html")
 
 
+@router.get("/decode", include_in_schema=False, summary="Decode QR codes / barcodes from images, many at once")
+def decode_page():
+    return _page("decode.html")
+
+
 @router.get(
     "/",
     summary="Playground, or legacy barcode image when bcid/text are given (bwip-js compatible)",

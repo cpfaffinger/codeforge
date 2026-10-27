@@ -79,6 +79,11 @@ def test_showcase_and_scan_pages(client):
     r = client.get("/scan")
     assert r.status_code == 200 and "BarcodeDetector" in r.text and "/static/vendor/zxing-library.min.js" in r.text
     assert client.get("/static/vendor/zxing-library.min.js").status_code == 200
+    r = client.get("/decode")
+    assert r.status_code == 200 and 'id="files"' in r.text and "multiple" in r.text and "/static/codes.js?v=" in r.text
+    assert 'capture="environment"' not in r.text.split('id="files"')[1].split(">")[0]  # the picker must offer the gallery, not only the camera
+    assert "photo-box" not in client.get("/scan").text and 'href="/decode"' in client.get("/scan").text
+    assert "function wasmRead" in client.get("/static/codes.js").text
     # playground links from the showcase/scanner prefill the barcode form
     assert "p.get(\"bcid\")" in client.get("/static/app.js").text
 
@@ -109,6 +114,7 @@ def test_pages_are_version_stamped_and_pwa_files_exist(client):
     html = client.get("/").text
     assert "/static/app.js?v=" + __version__ in html and 'rel="manifest"' in html
     assert "/static/vendor/zxing-reader.iife.js?v=" + __version__ in client.get("/scan").text
+    assert "/static/codes.js?v=" + __version__ in client.get("/decode").text
     m = client.get("/manifest.webmanifest")
     assert m.status_code == 200 and m.json()["start_url"].startswith("/scan")
     sw = client.get("/sw.js")

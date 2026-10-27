@@ -17,6 +17,7 @@
   <nav>
     <a href="/showcase">Showcase</a>
     <a href="/scan">Scan</a>
+    <a href="/decode">Decode files</a>
     <a href="/docs">API docs</a>
     <a href="/redoc">ReDoc</a>
     <a href="https://github.com/cpfaffinger/codeforge" rel="noopener">GitHub</a>
@@ -153,8 +154,8 @@
         <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="choose an image to decode">
           <strong>Drop an image here</strong>, paste from the clipboard, or
           <label class="link">choose a file <input type="file" name="file" accept="image/*" hidden></label>
-          <div class="muted small">PNG, JPEG, GIF, BMP, WEBP, TIFF up to <span id="decode-limit">16 MB</span> - not HEIC (iPhone: share as JPEG)</div>
-          <div class="muted small">QR Code, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar, PDF417, DataMatrix</div>
+          <div class="muted small">PNG, JPEG, GIF, BMP, WEBP, TIFF up to <span id="decode-limit">16 MB</span>, HEIC - many files at once, with history: <a href="/decode">Decode files</a></div>
+          <div class="muted small">QR, Micro QR, DataMatrix, Aztec, PDF417, MaxiCode, EAN/UPC, Code 128/39/93, ITF, Codabar, GS1 DataBar</div>
         </div>
         <div id="decode-progress" class="progress" hidden>
           <div class="bar"><div class="fill"></div></div>

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>codeforge decoder</title>
+<meta name="description" content="Decode QR codes and 1D/2D barcodes from screenshots, photos and image files, many at once; decoded in the browser, the server only as fallback.">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css?v=__VERSION__">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<style>
+  .dec-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); gap: 1.2rem; align-items: start; }
+  @media (max-width: 860px) { .dec-grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: .8rem; min-width: 0; }
+  .card h2 { margin: 0; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+  .drop { border: 2px dashed var(--border); border-radius: 10px; padding: 1.2rem; text-align: center; display: flex; flex-direction: column; gap: .7rem; align-items: center; }
+  .drop.over { border-color: var(--accent); background: rgba(37,99,235,.06); }
+  .pick { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+  label.btn { font: inherit; padding: .5rem .9rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+  label.btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  label.btn:hover { border-color: var(--accent); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: .5rem .8rem; align-items: center; }
+  .toolbar label { display: inline-flex; gap: .3rem; align-items: center; font-size: .85rem; cursor: pointer; }
+  .toolbar select { font: inherit; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); max-width: 100%; }
+  .summary { font-size: .9rem; display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; }
+  .summary b { font-weight: 600; }
+  .jobs { display: flex; flex-direction: column; gap: .6rem; }
+  .job { border: 1px solid var(--border); border-radius: 8px; padding: .6rem; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: .7rem; }
+  .job.found { border-color: var(--ok); }
+  .job.none { border-color: #d97706; }
+  .job.failed { border-color: var(--err); }
+  .job .thumb { width: 64px; height: 64px; object-fit: contain; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); }
+  .job .thumb.noimg { display: flex; align-items: center; justify-content: center; font-size: .7rem; color: var(--muted); }
+  .job .body { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
+  .job .name { font-weight: 600; font-size: .9rem; word-break: break-all; }
+  .job .state { font-size: .85rem; }
+  .job .state.err { color: var(--err); }
+  .job .state.ok { color: var(--ok); }
+  .job .state ul { margin: .2rem 0 0 1rem; padding: 0; color: var(--muted); }
+  .job .timing { font-size: .75rem; color: var(--muted); }
+  .job .progress { display: none; }
+  .job.busy .progress { display: flex; }
+  .code { border-top: 1px dashed var(--border); padding-top: .35rem; display: flex; flex-direction: column; gap: .25rem; }
+  .code .raw, .scan .raw { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; word-break: break-all; white-space: pre-wrap; }
+  .code .meta, .scan .meta { font-size: .78rem; color: var(--muted); display: flex; gap: .6rem; flex-wrap: wrap; }
+  .code .fmt, .scan .fmt { font-weight: 600; color: var(--text); }
+  .acts { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .acts button, .acts a { font-size: .8rem; padding: .25rem .55rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); text-decoration: none; cursor: pointer; }
+  .acts a.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .scan { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .7rem; display: flex; flex-direction: column; gap: .35rem; }
+  .scan.new { border-color: var(--ok); }
+  .empty { color: var(--muted); font-size: .9rem; }
+  pre.api { font-size: .8rem; overflow-x: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .6rem; margin: 0; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="28" height="28"> codeforge</a>
+  <nav>
+    <a href="/">Playground</a>
+    <a href="/showcase">Showcase</a>
+    <a href="/scan">Scan</a>
+    <a href="/decode"><strong>Decode files</strong></a>
+    <a href="/docs">API docs</a>
+    <a href="https://github.com/cpfaffinger/codeforge" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <div class="dec-grid">
+    <section class="card">
+      <h2>Decode images &amp; files</h2>
+      <div class="drop" id="drop">
+        <div class="pick">
+          <label class="btn primary" for="files" id="pick-files">Choose images</label>
+          <label class="btn" for="camera" id="pick-camera">Take a photo</label>
+          <input type="file" id="files" accept="image/*,.heic,.heif,.avif" multiple hidden>
+          <input type="file" id="camera" accept="image/*" capture="environment" hidden>
+        </div>
+        <div class="muted small">Screenshots, gallery pictures or files, several at once. You can also drop files here or paste an image (Ctrl+V).<br>
+          PNG, JPEG, GIF, BMP, WEBP; HEIC/AVIF and anything the browser cannot read go to the server (up to <span id="limit">16 MB</span> each).</div>
+      </div>
+      <div class="toolbar">
+        <label>codes <select id="formats" title="which codes to look for"></select></label>
+        <label title="private data (eSIM codes, Wi-Fi passwords ...) stays on your device when the browser finds the code"><input type="checkbox" id="browser-first" checked> decode in the browser first (no upload when a code is found)</label>
+      </div>
+      <div class="summary" id="summary" hidden>
+        <span id="summary-text"></span>
+        <button type="button" class="mini" id="copy-all">Copy all codes</button>
+        <button type="button" class="mini" id="export-batch">Export CSV</button>
+        <button type="button" class="mini" id="clear-batch">Clear</button>
+      </div>
+      <div class="jobs" id="jobs"></div>
+      <details>
+        <summary class="small">API: decode files from scripts</summary>
+        <pre class="api" id="api"></pre>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Decoded codes <span class="small muted" id="listinfo"></span></h2>
+      <div id="history"></div>
+      <div class="toolbar">
+        <button type="button" id="clear">Clear list</button>
+        <button type="button" id="export">Export CSV</button>
+        <span class="small muted">decoded files, kept in this browser only (localStorage); camera scans are listed on <a href="/scan">Scan</a></span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="muted small">Images are decoded in your browser with <a href="https://github.com/Sec-ant/zxing-wasm">zxing-wasm</a> (MIT, zxing-cpp Apache-2.0); when it finds nothing they are sent to the codeforge API, which tries more passes (sharpening, contrast, zbar, libdmtx) and reads HEIC.</footer>
+<div id="toast" class="toast" hidden></div>
+
+<script src="/static/vendor/zxing-reader.iife.js?v=__VERSION__"></script>
+<script src="/static/codes.js?v=__VERSION__"></script>
+<script>
+(function () {
+  "use strict";
+  const { $, esc, fmtMs, fmtSize, pref, setPref } = CF;
+  const store = CF.History("codeforge.decodes.v1", 200);
+  const FORMATS_KEY = "codeforge.decode.formats", BROWSER_KEY = "codeforge.decode.browserfirst";
+  let maxUpload = 16 * 1024 * 1024, jobs = [], queueRunning = false, pickerOpenedAt = 0, seq = 0;
+
+  function renderHistory(highlight) { CF.renderHistory(store, $("#history"), $("#listinfo"), highlight, "No decoded codes yet."); }
+  $("#clear").addEventListener("click", () => { if (confirm("Delete all decoded codes from this list?")) { store.clear(); renderHistory(); } });
+  $("#export").addEventListener("click", () => CF.download("codeforge-decoded.csv", CF.historyCsv(store)));
+
+  // ---- input: picker, camera, drop, paste ----
+  $("#pick-files").addEventListener("click", () => { pickerOpenedAt = performance.now(); });
+  $("#pick-camera").addEventListener("click", () => { pickerOpenedAt = performance.now(); });
+  ["#files", "#camera"].forEach((id) => $(id).addEventListener("change", (e) => {
+    const files = [...e.target.files]; e.target.value = "";
+    const pickMs = pickerOpenedAt ? performance.now() - pickerOpenedAt : null; pickerOpenedAt = 0;
+    enqueue(files, pickMs);
+  }));
+  const drop = $("#drop");
+  ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) { e.preventDefault(); drop.classList.add("over"); } }));
+  document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) drop.classList.remove("over"); });
+  document.addEventListener("drop", (e) => { if (!e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); drop.classList.remove("over"); enqueue([...e.dataTransfer.files], null); });
+  document.addEventListener("paste", (e) => {
+    const files = [...((e.clipboardData && e.clipboardData.files) || [])].filter((f) => f.type.startsWith("image/"));
+    if (files.length) { e.preventDefault(); enqueue(files.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], "pasted-" + (++seq) + (i ? "-" + i : "") + "." + (f.type.split("/")[1] || "png"), { type: f.type }))), null); }
+  });
+
+  // ---- jobs ----
+  function enqueue(files, pickMs) {
+    files = files.filter(Boolean);
+    if (!files.length) return;
+    files.forEach((f, i) => {
+      const job = { id: ++seq, file: f, name: f.name || "image", size: f.size, status: "queued", codes: [], t: { pick: i === 0 ? pickMs : null }, el: null };
+      job.el = document.createElement("div"); job.el.className = "job";
+      const url = URL.createObjectURL(f); job.url = url;
+      job.el.innerHTML = '<img class="thumb" alt="" src="' + url + '"><div class="body"><div class="name">' + esc(job.name) + ' <span class="muted small">' + fmtSize(f.size) + '</span></div>' +
+        '<div class="state">queued</div><div class="progress"><div class="bar"><div class="fill"></div></div></div><div class="codes"></div><div class="timing"></div></div>';
+      job.el.querySelector(".thumb").addEventListener("error", (e) => { const d = document.createElement("div"); d.className = "thumb noimg"; d.textContent = (f.name.split(".").pop() || "file").toUpperCase(); e.target.replaceWith(d); });
+      $("#jobs").prepend(job.el);
+      jobs.push(job);
+    });
+    summary();
+    runQueue();
+  }
+  async function runQueue() {
+    if (queueRunning) return;
+    queueRunning = true;
+    try { let job; while ((job = jobs.find((j) => j.status === "queued"))) await decodeJob(job); }
+    finally { queueRunning = false; }
+  }
+  function setState(job, text, cls, html) { const st = job.el.querySelector(".state"); st.className = "state" + (cls ? " " + cls : ""); if (html) st.innerHTML = text; else st.textContent = text; }
+  function showTiming(job) {
+    const t = job.t, parts = [];
+    if (t.pick != null) parts.push("choosing " + fmtMs(t.pick));
+    if (t.browser != null) parts.push("browser " + fmtMs(t.browser));
+    if (t.upload != null) parts.push("upload " + fmtMs(t.upload));
+    if (t.server != null) parts.push("server " + fmtMs(t.server));
+    if (t.total != null) parts.push("total " + fmtMs(t.total));
+    job.el.querySelector(".timing").textContent = parts.join(" · ");
+  }
+  function finishJob(job, codes, via) {
+    job.codes = codes.map((c) => Object.assign(c, { via }));
+    job.status = codes.length ? "found" : "none";
+    job.el.classList.remove("busy"); job.el.classList.add(job.status);
+    let last = null;
+    codes.forEach((c) => { const item = store.add(c.text, c.format, { source: via, file: job.name }); last = item.format + "|" + item.text; });
+    const box = job.el.querySelector(".codes");
+    box.innerHTML = CF.codeListHtml(job.codes); CF.wireCodeList(box, job.codes);
+    if (codes.length) renderHistory(last);
+    showTiming(job); summary();
+  }
+  function failJob(job, msg) {
+    job.status = "failed"; job.el.classList.remove("busy"); job.el.classList.add("failed");
+    setState(job, msg, "err"); showTiming(job); summary();
+  }
+
+  async function decodeJob(job) {
+    job.status = "running"; job.el.classList.add("busy");
+    const group = $("#formats").value, fill = job.el.querySelector(".fill");
+    const t0 = performance.now();
+    let note = "";
+    // 1) in the browser: no upload, works offline, private data stays on the device
+    if ($("#browser-first").checked && CF.wasmAvailable()) {
+      setState(job, "decoding in your browser ..."); fill.classList.add("indeterminate");
+      try {
+        const res = await CF.wasmRead(job.file, group);
+        job.t.browser = performance.now() - t0;
+        if (res && res.length) {
+          job.t.total = performance.now() - t0;
+          setState(job, res.length + " code" + (res.length > 1 ? "s" : "") + " found in your browser - not uploaded", "ok");
+          finishJob(job, res.map((r) => ({ text: r.text, format: r.format || "UNKNOWN" })), "browser");
+          return;
+        }
+        note = "nothing found in the browser - ";
+      } catch (e) {
+        job.t.browser = performance.now() - t0;
+        note = "the browser cannot read this file - ";
+      }
+    }
+    // 2) on the server
+    if (job.size > maxUpload) { job.t.total = performance.now() - t0; failJob(job, note + "too large for the server (" + fmtSize(job.size) + ", limit " + fmtSize(maxUpload) + ")"); return; }
+    await new Promise((resolve) => {
+      const fd = new FormData(); fd.append("file", job.file, job.name);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/v1/decode" + (group !== "all" ? "?formats=" + group : "")); xhr.timeout = 120000;
+      const t1 = performance.now(); let tUp = null, timer = null;
+      fill.classList.remove("indeterminate"); fill.style.width = "0%";
+      setState(job, note + "uploading to the server ...");
+      xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) { fill.style.width = Math.round(ev.loaded / ev.total * 100) + "%"; setState(job, note + "uploading " + fmtSize(ev.loaded) + " of " + fmtSize(ev.total) + " ..."); } };
+      xhr.upload.onload = () => { tUp = performance.now(); job.t.upload = tUp - t1; fill.classList.add("indeterminate"); timer = setInterval(() => setState(job, "decoding on the server ... " + ((performance.now() - tUp) / 1000).toFixed(1) + " s"), 200); };
+      const end = () => { clearInterval(timer); if (job.t.upload == null) job.t.upload = performance.now() - t1; job.t.total = performance.now() - t0; resolve(); };
+      xhr.onload = () => {
+        end();
+        let j; try { j = JSON.parse(xhr.responseText); } catch (e) { j = { detail: "HTTP " + xhr.status }; }
+        if (j && j.elapsed_ms != null) job.t.server = j.elapsed_ms;
+        if (xhr.status !== 200) { failJob(job, "server: " + (typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail))); return; }
+        if (!j.count) {
+          setState(job, "<strong>no code found</strong> (" + j.width + "x" + j.height + " px, " + j.passes + " passes)<ul>" + (j.hints || []).map((h) => "<li>" + esc(h) + "</li>").join("") + "</ul>", "err", true);
+          finishJob(job, [], "server"); return;
+        }
+        setState(job, j.count + " code" + (j.count > 1 ? "s" : "") + " found by the server", "ok");
+        finishJob(job, j.symbols.map((s) => ({ text: s.data, format: s.type })), "server");
+      };
+      xhr.onerror = () => { end(); failJob(job, "upload failed: network error"); };
+      xhr.ontimeout = () => { end(); failJob(job, "upload failed: timeout"); };
+      xhr.send(fd);
+    });
+  }
+
+  function summary() {
+    const done = jobs.filter((j) => ["found", "none", "failed"].includes(j.status));
+    const codes = jobs.reduce((n, j) => n + j.codes.length, 0);
+    const pending = jobs.length - done.length;
+    $("#summary").hidden = !jobs.length;
+    $("#summary-text").innerHTML = "<b>" + jobs.length + "</b> file" + (jobs.length === 1 ? "" : "s") +
+      " · <b>" + jobs.filter((j) => j.status === "found").length + "</b> with codes · <b>" + codes + "</b> code" + (codes === 1 ? "" : "s") +
+      (jobs.some((j) => j.status === "none") ? " · " + jobs.filter((j) => j.status === "none").length + " without" : "") +
+      (jobs.some((j) => j.status === "failed") ? " · " + jobs.filter((j) => j.status === "failed").length + " failed" : "") +
+      (pending ? ' · <span class="spinner"></span> ' + pending + " to go" : "");
+  }
+  $("#copy-all").addEventListener("click", () => CF.copy(jobs.flatMap((j) => j.codes.map((c) => c.text)).join("\n")));
+  $("#export-batch").addEventListener("click", () => {
+    const rows = [];
+    jobs.forEach((j) => { if (j.codes.length) j.codes.forEach((c) => rows.push([j.name, j.status, CF.niceFormat(c.format), c.text, c.via])); else rows.push([j.name, j.status, "", "", ""]); });
+    CF.download("codeforge-batch.csv", CF.csv(rows, ["file", "status", "format", "text", "decoded_by"]));
+  });
+  $("#clear-batch").addEventListener("click", () => {
+    jobs.filter((j) => j.status !== "running" && j.status !== "queued").forEach((j) => { URL.revokeObjectURL(j.url); j.el.remove(); });
+    jobs = jobs.filter((j) => j.status === "running" || j.status === "queued");
+    summary();
+  });
+
+  // ---- init ----
+  CF.fillGroupSelect($("#formats"), pref(FORMATS_KEY, "all"));
+  $("#formats").addEventListener("change", (e) => setPref(FORMATS_KEY, e.target.value));
+  $("#browser-first").checked = pref(BROWSER_KEY, "1") === "1";
+  $("#browser-first").addEventListener("change", (e) => setPref(BROWSER_KEY, e.target.checked ? "1" : "0"));
+  if (CF.wasmAvailable()) CF.ensureWasm().catch(() => {});   // warm up, so the first file is decoded right away
+  fetch("/api/v1/limits").then((r) => r.json()).then((l) => {
+    maxUpload = l.max_upload_bytes || maxUpload; $("#limit").textContent = fmtSize(maxUpload);
+    const base = location.origin + "/api/v1/decode";
+    $("#api").textContent =
+      "# one image (multipart or raw body); formats= restricts to qr, 2d, 1d or types like ean13,code128\n" +
+      "curl -F file=@photo.jpg '" + base + "'\n" +
+      "curl --data-binary @label.png -H 'Content-Type: image/png' '" + base + "?formats=1d'\n\n" +
+      "# up to " + (l.decode_batch_max_files || 20) + " images in one request, one result per file\n" +
+      "curl -F file=@a.jpg -F file=@b.png -F file=@c.heic '" + base + "/batch'\n\n" +
+      "# groups and symbol types\ncurl '" + base + "/formats'";
+  }).catch(() => {});
+  renderHistory();
+  CF.registerServiceWorker();
+})();
+</script>
+</body>
+</html>

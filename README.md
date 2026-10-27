@@ -22,7 +22,8 @@ container and retire the originals.
 | **Batch** | many codes per request as JSON (base64), ZIP, or a PDF label sheet with configurable grid and captions |
 | **Playground** | `/` - live preview, every symbology selectable from a grouped/filterable list with its data format rules and **every encoder/renderer option as form fields** (required ones first, all extracted from BWIPP itself), live validation of the data against the rules, examples, decoder with drag & drop / paste / upload progress, batch builder, copy API and legacy URLs |
 | **Showcase** | `/showcase` - every symbology rendered with its example; click a card to open it prefilled in the playground |
-| **Scanner** | `/scan` - live camera scanning in the browser: frames are decoded with the BarcodeDetector API (self-tested), zxing-wasm (zxing-cpp compiled to WebAssembly, served locally), ZXing JS or the codeforge API as a last resort; no duplicate scans while the code stays in view, camera stops after a scan unless "keep the camera on" is ticked, torch/zoom, photo upload decoded on the server; installable as a home-screen app (manifest + service worker); recent scans are kept in localStorage with a one-click "generate with codeforge" link |
+| **File decoder** | `/decode` - screenshots, gallery pictures and files, many at once (picker, camera, drag & drop, paste): decoded in the browser with zxing-wasm (nothing is uploaded when a code is found), otherwise by the API; per-file status, timings and results, choice of codes, own history with CSV export |
+| **Scanner** | `/scan` - live camera scanning in the browser: frames are decoded with the BarcodeDetector API (self-tested), zxing-wasm (zxing-cpp compiled to WebAssembly, served locally), ZXing JS or the codeforge API as a last resort; no duplicate scans while the code stays in view, camera stops after a scan unless "keep the camera on" is ticked, torch/zoom, choice of codes (all, QR, 2D, 1D barcodes); installable as a home-screen app (manifest + service worker); recent scans are kept in localStorage with a one-click "generate with codeforge" link |
 | **API docs** | Swagger UI at `/docs`, ReDoc at `/redoc`, schema at `/openapi.json` |
 | **Ops** | one container, non-root, healthcheck, per-IP rate limit, size limits, gzip, ETags and version-stamped assets, `/healthz`, `/stats`, 12-factor config via env vars |
 
@@ -81,6 +82,8 @@ Flags are given without a value (`includetext`) or as `includetext=true`.
 POST /api/v1/decode          multipart/form-data, field "file"       curl -F file=@photo.jpg https://host/api/v1/decode
 POST /api/v1/decode          raw image body                           curl --data-binary @photo.jpg -H "Content-Type: image/jpeg" https://host/api/v1/decode
 POST /api/v1/decode/base64   {"image": "data:image/png;base64,...."}
+POST /api/v1/decode/batch    several files, one result per file       curl -F file=@a.jpg -F file=@b.png https://host/api/v1/decode/batch
+GET  /api/v1/decode/formats  groups and symbol types for ?formats=
 -> {"count": 1, "width": 4000, "height": 3000, "elapsed_ms": 210, "passes": 1, "hints": [],
     "symbols": [{"type": "QRCODE", "data": "https://example.com", "engine": "zbar", "found_by": "scale1600/plain", "rect": {...}, "polygon": [...]}]}
 ```
@@ -88,7 +91,10 @@ POST /api/v1/decode/base64   {"image": "data:image/png;base64,...."}
 Photos go through a ladder of pre-processing passes (downscaled copies, illumination flattening, autocontrast,
 sharpening, inverted, rotated) until a pass finds something or `CODEFORGE_DECODE_BUDGET` seconds are used up;
 `found_by` names the engine and pass (`zxing/plain`, `zbar/scale1600/inverted` ...). With `count: 0` the `hints` explain what to try.
-`try_harder=false` runs a single plain pass (used by the live scanner's server fallback). Input: PNG, JPEG, GIF, BMP, WEBP,
+`formats` restricts the search: `qr`, `2d`, `1d`, single types (`ean13,code128`) or combinations (`qr,1d`); symbols of other
+formats are ignored and do not end the search, a hint says when the filter excluded something. The batch endpoint takes up to
+`CODEFORGE_DECODE_BATCH_MAX_FILES` images and stops after `CODEFORGE_DECODE_BATCH_BUDGET` seconds (remaining files come back
+with an error to resend them). `try_harder=false` runs a single plain pass (used by the live scanner's server fallback). Input: PNG, JPEG, GIF, BMP, WEBP,
 TIFF and HEIC/HEIF. zxing-cpp results also carry `format` (e.g. `Micro QR Code`), `ec_level` and the ISO 15424 `symbology_identifier`.
 
 ### Batch and PDF label sheets
@@ -151,6 +157,8 @@ All settings are environment variables with the prefix `CODEFORGE_` (or a `.env`
 | `CODEFORGE_MAX_BATCH_ITEMS` | `200` | items per batch request |
 | `CODEFORGE_MAX_UPLOAD_BYTES` | `16777216` | decoder upload limit |
 | `CODEFORGE_DECODE_BUDGET` | `8` | seconds the decoder may spend on pre-processing passes per image |
+| `CODEFORGE_DECODE_BATCH_MAX_FILES` | `20` | images per `/api/v1/decode/batch` request |
+| `CODEFORGE_DECODE_BATCH_BUDGET` | `60` | seconds one decode batch may take (stay below proxy timeouts, Cloudflare: 100 s) |
 | `CODEFORGE_GS_WORKERS` | `2` | persistent Ghostscript processes per uvicorn worker; `0` = one gs start per image (slow) |
 | `CODEFORGE_GS_TIMEOUT` | `15` | seconds per Ghostscript job before the worker is restarted |
 | `CODEFORGE_CACHE_MAX_BYTES` | `67108864` | in-memory cache for rendered barcodes per worker, `0` = off |

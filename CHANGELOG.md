@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.0 - 2026-10-27
+
+* **live scan and file decoding are separate pages**: `/scan` is the camera only, the new `/decode` takes screenshots, gallery pictures and files, **many at once** (picker with multiple selection, "take a photo", drag & drop, paste). Each page keeps its **own history** (camera scans / decoded files) with CSV export
+* fixed: the scanner's "Decode a photo instead" had `capture="environment"`, so Android (Chrome and Firefox) opened the camera app instead of the gallery and a screenshot could not be chosen. "Choose images" and "Take a photo" are now separate buttons
+* files are decoded **in the browser first** (zxing-wasm): nothing is uploaded when a code is found, which also keeps private codes (eSIM activation, Wi-Fi passwords) on the device; the server is asked only when the browser finds nothing or cannot read the file (HEIC). Every file shows its status, the codes found and a timing breakdown (choosing, browser, upload, server, total)
+* **choice of codes** on both pages and in the API: all, QR only, 2D codes, 1D barcodes (EAN/UPC, Code 128/39/93, ITF, Codabar, DataBar ...). `?formats=` on `/api/v1/decode`, `/decode/base64` and `/decode/batch` takes groups (`qr`, `2d`, `1d`) and types (`ean13,code128`); other symbols do not end the search, and a hint explains when the filter excluded a code. `GET /api/v1/decode/formats` lists groups and types
+* **`POST /api/v1/decode/batch`**: several images in one multipart request, one result per file in upload order, unreadable files reported per item; limits `CODEFORGE_DECODE_BATCH_MAX_FILES` (20) and `CODEFORGE_DECODE_BATCH_BUDGET` (60 s), also in `/api/v1/limits`
+* shared front-end helpers in `static/codes.js`; the API docs list the full set of readable symbologies and HEIC support
+* deploy: the nginx template logs request timings (`rt` incl. the client upload, `urt` in the container, `rl` request size) and proxies to `127.0.0.1` (`localhost` resolved to `::1` first and every request needed a second upstream attempt)
+
 ## 1.4.1 - 2026-10-27
 
 * version policy: no dependency is pinned to a minor or patch version any more. `pyzbar`/`pylibdmtx` (`<0.2` -> `<1`), `Pillow` (`<13` -> `<14`, 13.0 verified), `python-multipart` (`<1`), Dockerfile syntax `docker/dockerfile:1`; `reportlab` 5.x and `fastapi` 0.162 verified by the test suite
